@@ -1,0 +1,85 @@
+import random
+from dataclasses import dataclass, field
+from typing import List, Tuple
+
+from shapely import Polygon
+
+from src.urban_planner.config import WINDOW_WIDTH, WINDOW_HEIGHT
+from src.urban_planner.utils import generate_random_outline
+
+
+@dataclass
+class Outline:
+    """A data class representing the building's outline."""
+    coords: List[Tuple[int, int]]
+    polygon: Polygon = field(init=False)
+    area: int = field(init=False)
+
+    def __post_init__(self):
+        self.update_geometry()
+
+    def update_geometry(self):
+        if len(self.coords) >= 3:
+            self.polygon = Polygon(self.coords)
+            self.area = int(self.polygon.area)
+        else:
+            self.polygon = Polygon()
+            self.area = 0
+
+    @classmethod
+    def from_default_square(cls, size: int = 100) -> 'Outline':
+        """
+        Creates a default square outline centered in the window.
+
+        Args:
+            size: The half-width and half-height of the square. The total
+                  sidelength will be 2 * size.
+
+        Returns:
+            An Outline instance representing the default square.
+        """
+        center_x, center_y = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        initial_coords = [
+            (center_x - size, center_y - size),
+            (center_x + size, center_y - size),
+            (center_x + size, center_y + size),
+            (center_x - size, center_y + size)
+        ]
+        return cls(coords=initial_coords)
+
+
+@dataclass
+class Plot:
+    """A data class representing the plot of land, using your generation logic."""
+    coords: List[Tuple[int, int]]
+    permitted_outline: Polygon
+    area_range: Tuple[int, int]
+
+
+    @classmethod
+    def from_random_generation(cls) -> 'Plot':
+        """
+        Creates a new Plot instance with a procedurally generated shape.
+
+        This factory method uses the `generate_random_outline` utility to create
+        a complex plot shape and a permitted building area within it. It then
+        calculates a target area range based on a random ratio of the
+        total plot area.
+
+        Returns:
+            A Plot instance with randomized geometric properties.
+        """
+        offset = random.randint(4, 8) * 10
+        coords, permitted_outline = generate_random_outline(offset)
+
+        polygon = Polygon(coords)
+        covered_area_ratio = random.uniform(0.1, 0.2)
+        max_area = polygon.area * covered_area_ratio
+        area_range = (int(max_area * 0.75), int(max_area))
+
+        return cls(
+            coords=coords,
+            permitted_outline=permitted_outline,
+            area_range=area_range
+        )
+
