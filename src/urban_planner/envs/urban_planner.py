@@ -5,11 +5,12 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from src.urban_planner.config import *
-from src.urban_planner.domain.geometries import Plot, Outline
-from src.urban_planner.logic.assessment import OutlineAssessment
-from src.urban_planner.presentation.renderer import Renderer
+from urban_planner.config import *
+from urban_planner.domain.geometries import Plot, Outline
+from urban_planner.logic.assessment import OutlineAssessment
+from urban_planner.presentation.renderer import Renderer
 
+logger = logging.getLogger(__name__)
 
 
 class ObsKeys(str, Enum):

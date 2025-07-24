@@ -5,7 +5,7 @@ from typing import List, Tuple, Optional
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import nearest_points
 
-from src.urban_planner.config import WINDOW_WIDTH, WINDOW_HEIGHT, GENERATION_PARAMS
+from urban_planner.config import WINDOW_WIDTH, WINDOW_HEIGHT, GENERATION_PARAMS
 
 
 def _project_point_to_line(point: Tuple[float, float], line: List[Tuple[float, float]]) -> Tuple[float, float]:
@@ -127,7 +127,7 @@ def generate_random_outline(offset: int) -> Tuple[List[Tuple[int, int]], Polygon
     1. An "intermediate" polygon is created by asymmetrically modifying the initial plot.
     2. This intermediate polygon is then buffered inward to create the final, smaller permitted outline.
 
-    This process is repeated until a valid outline is generated or the attempt limit is reached.
+    This process is repeated indefinitely until a valid outline is generated.
 
     Args:
         offset: The base offset value used for modifications and buffering.
@@ -136,11 +136,8 @@ def generate_random_outline(offset: int) -> Tuple[List[Tuple[int, int]], Polygon
         A tuple containing:
         - A list of (x, y) coordinates for the outer plot boundary.
         - A Shapely Polygon object for the inner, permitted building area.
-
-    Raises:
-        RuntimeError: If a valid outline cannot be generated within the attempt limit.
     """
-    for _ in range(GENERATION_PARAMS["MAX_GENERATION_ATTEMPTS"]):
+    while True:
         initial_points = _generate_initial_points()
         plot_polygon = _validate_plot_polygon(initial_points)
         if not plot_polygon:
@@ -154,13 +151,15 @@ def generate_random_outline(offset: int) -> Tuple[List[Tuple[int, int]], Polygon
 
         min_area = (WINDOW_WIDTH * (WINDOW_HEIGHT - 50)) * GENERATION_PARAMS["MIN_POLYGON_AREA_RATIO"]
         if permitted_outline.is_simple and permitted_outline.area >= min_area and isinstance(permitted_outline, Polygon):
-            plot_coords_int = [(round(x), round(y)) for x, y in plot_polygon.exterior.coords[:-1]]
-            permitted_coords_int = [(round(x), round(y)) for x, y in permitted_outline.exterior.coords]
+            plot_coords_int = [
+                (int(round(x)), int(round(y))) for x, y in plot_polygon.exterior.coords[:-1]
+            ]
+            permitted_coords_int = [
+                (int(round(x)), int(round(y))) for x, y in permitted_outline.exterior.coords
+            ]
 
             if len(permitted_coords_int) >= 4:
                  return plot_coords_int, Polygon(permitted_coords_int)
-
-    raise RuntimeError(f"Failed to generate a valid outline after {GENERATION_PARAMS['MAX_GENERATION_ATTEMPTS']} attempts.")
 
 
 def generate_desired_center(plot_outline: Polygon, offset: int) -> Point:
@@ -185,9 +184,7 @@ def generate_desired_center(plot_outline: Polygon, offset: int) -> Point:
 
     min_x, min_y, max_x, max_y = inner_area.bounds
 
-    for _ in range(GENERATION_PARAMS["MAX_GENERATION_ATTEMPTS"]):
+    while True:
         point = Point(random.uniform(min_x, max_x), random.uniform(min_y, max_y))
         if inner_area.contains(point):
             return point
-
-    return inner_area.representative_point()

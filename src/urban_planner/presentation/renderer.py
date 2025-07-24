@@ -3,7 +3,7 @@ from typing import Optional, List
 
 import pygame
 
-from src.urban_planner.domain.geometries import Plot, Outline
+from urban_planner.domain.geometries import Plot, Outline
 
 logger = logging.getLogger(__name__)
 

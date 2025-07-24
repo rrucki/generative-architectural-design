@@ -4,8 +4,8 @@ from typing import List, Tuple
 
 from shapely import Polygon
 
-from src.urban_planner.config import WINDOW_WIDTH, WINDOW_HEIGHT
-from src.urban_planner.utils import generate_random_outline
+from urban_planner.config import WINDOW_WIDTH, WINDOW_HEIGHT
+from urban_planner.utils import generate_random_outline
 
 
 @dataclass

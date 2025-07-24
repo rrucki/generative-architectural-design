@@ -1,8 +1,7 @@
 from typing import Tuple, List
 from shapely.geometry import Polygon
 
-from src.urban_planner.config import REWARD_AREA_MULTIPLIER, REWARD
-from src.urban_planner.utils.geometry_utils import distance_outside_shape
+from urban_planner.utils.geometry_utils import distance_outside_shape
 
 
 class OutlineAssessment:
