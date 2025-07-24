@@ -34,10 +34,10 @@ class OutlineAssessment:
         self.current_outline_coords: List[Tuple[int, int]] = []
         self.current_area: int = 0
         self.outside_shape_distances: List[int] = []
+        self.nearest_boundary_points: List[Tuple[float, float]] = []
         self.area_difference: int = 0
         self.checklist: List[bool] = [False, False]
 
-        self.update(initial_outline_coords)
 
     def update(self, new_outline_coords: List[Tuple[int, int]]):
         """
@@ -62,9 +62,12 @@ class OutlineAssessment:
 
     def _check_distances(self) -> None:
         """Calculates the distance of each outline vertex to the permitted plot boundary."""
-        self.outside_shape_distances = [
-            abs(distance_outside_shape(self.permitted_plot, coord)) for coord
-            in self.current_outline_coords]
+        self.outside_shape_distances = []
+        self.nearest_boundary_points = []
+        for coord in self.current_outline_coords:
+            distance, nearest_point = distance_outside_shape(self.permitted_plot, coord)
+            self.outside_shape_distances.append(abs(distance))
+            self.nearest_boundary_points.append(nearest_point)
 
     def _check_area_difference(self) -> None:
         """Calculates the difference between the current area and the target area range."""
@@ -78,36 +81,8 @@ class OutlineAssessment:
 
     def _update_checklist(self) -> None:
         """Updates the completion checklist based on the current state."""
-        nodes_in_place = sum(
-            1 for dist in self.outside_shape_distances if dist == 0)
-        self.checklist[0] = (
-                    nodes_in_place == len(self.current_outline_coords))
+        all_nodes_in_place = all(
+            dist == 0 for dist in self.outside_shape_distances)
+
+        self.checklist[0] = all_nodes_in_place
         self.checklist[1] = (self.area_difference == 0)
-
-    def total_reward(self) -> int:
-        """
-        Calculates the total reward based on the current internal state.
-
-        The reward is composed of:
-        - A base reward for each vertex that is inside the permitted area.
-        - A significant bonus if all vertices are inside the permitted area.
-        - A bonus proportional to the building's area if it's within the target range.
-
-        This method has no side effects and only reads the current state.
-
-        Returns:
-            An integer representing the total calculated reward.
-        """
-        reward = 0
-
-        nodes_in_place = sum(
-            1 for dist in self.outside_shape_distances if dist == 0)
-        reward += nodes_in_place * REWARD / 4
-
-        if self.checklist[0]:
-            reward += REWARD * 2
-
-        if self.checklist[1]:
-            reward += self.current_area * REWARD_AREA_MULTIPLIER
-
-        return int(reward)
