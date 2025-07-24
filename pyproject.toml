@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "urban-planner"
+version = "0.1.0"
+description = "A project for generative architectural design using reinforcement learning."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "gymnasium",
+    "pygame",
+    "stable-baselines3[extra]",
+    "shapely",
+    "numpy",
+    "tensorboard",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

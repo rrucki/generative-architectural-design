@@ -2,7 +2,6 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-# C extensions
 *.so
 
 .Python
@@ -27,7 +26,6 @@ MANIFEST
 *.manifest
 *.spec
 
-# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
@@ -45,7 +43,6 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
 *.mo
 *.pot
 
@@ -54,7 +51,6 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Flask stuff:
 instance/
 .webassets-cache
 
@@ -62,7 +58,6 @@ instance/
 
 docs/_build/
 
-# PyBuilder
 .pybuilder/
 target/
 
