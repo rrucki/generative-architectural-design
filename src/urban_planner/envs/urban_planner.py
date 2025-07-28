@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-from enum import Enum
+
 from typing import Optional, Dict, Any, Tuple, Type, List
 
 import gymnasium as gym
@@ -14,16 +14,6 @@ from urban_planner.logic.assessment import OutlineAssessment
 from urban_planner.presentation.renderer import Renderer
 
 logger = logging.getLogger(__name__)
-
-
-class ObsKeys(str, Enum):
-    AGENT = "agent"
-    AREA_DIFFERENCE = "area_difference"
-    BUILDING_AREA = "building_area"
-    OUTSIDE_SHAPE = "outside_shape"
-    NEAREST_BOUNDARY_POINTS = "nearest_boundary_points"
-    REMAINING_MOVES = "remaining_moves"
-
 
 class UrbanPlannerEnv(gym.Env):
     """

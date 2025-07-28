@@ -1,2 +1,2 @@
 from .generate_env import generate_random_outline, generate_desired_center
-from .geometry_utils import distance_outside_shape
+from .geometry_utils import distance_to_polygon

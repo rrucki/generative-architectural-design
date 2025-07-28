@@ -1,5 +1,7 @@
+import math
 from typing import Tuple, List
 
+import numpy as np
 import shapely.errors
 from shapely import LineString
 from shapely.geometry import Point, Polygon
@@ -82,13 +84,49 @@ def calculate_width(coords: List[Tuple[int, int]]) -> List[float]:
         return [calculate_rectangular_width(coords)]
 
 
-def distance_outside_shape(polygon: Polygon,
-                           target_point: Tuple[float, float]) -> Tuple[
-    int, Tuple[float, float]]:
+def calculate_polygon_angles(coords: List[Tuple[int, int]]) -> List[float]:
     """
-    Calculates the distance from a point to the exterior of a polygon and the nearest point.
+    Calculates the interior angles of a polygon at each vertex.
 
-    This is a useful function for reward shaping in reinforcement learning.
+    Args:
+        coords: A list of (x, y) coordinates for the polygon.
+
+    Returns:
+        A list of floats representing the angle in degrees at each vertex.
+    """
+    angles = []
+    num_vertices = len(coords)
+    if num_vertices < 3:
+        return [0.0] * num_vertices
+
+    for i in range(num_vertices):
+        p_prev = coords[i - 1]
+        p_curr = coords[i]
+        p_next = coords[(i + 1) % num_vertices]
+
+        v1 = (p_prev[0] - p_curr[0], p_prev[1] - p_curr[1])
+        v2 = (p_next[0] - p_curr[0], p_next[1] - p_curr[1])
+
+        dot_product = v1[0] * v2[0] + v1[1] * v2[1]
+        mag_v1 = math.sqrt(v1[0] ** 2 + v1[1] ** 2)
+        mag_v2 = math.sqrt(v2[0] ** 2 + v2[1] ** 2)
+
+        if mag_v1 * mag_v2 == 0:
+            angles.append(180.0)
+            continue
+
+        angle_rad = math.acos(
+            np.clip(dot_product / (mag_v1 * mag_v2), -1.0, 1.0))
+        angles.append(math.degrees(angle_rad))
+
+    return angles
+
+
+def distance_to_polygon(polygon: Polygon,
+                        target_point: Tuple[float, float]) -> Tuple[
+    float, Tuple[float, float]]:
+    """
+     Calculates the distance from a point to a polygon and finds the nearest point on its boundary.
 
     Args:
         polygon: The Shapely Polygon to check against.
@@ -96,8 +134,8 @@ def distance_outside_shape(polygon: Polygon,
 
     Returns:
         A tuple containing:
-        - 0 if the point is inside the polygon, otherwise a negative integer
-          representing the distance to the polygon's exterior.
+         - A non-negative float representing the distance. It is 0 if the point
+           is inside or on the boundary of the polygon.
         - The coordinates of the nearest point on the polygon's exterior.
           If the target_point is inside, it returns the target_point itself.
     """
@@ -106,7 +144,7 @@ def distance_outside_shape(polygon: Polygon,
     if polygon.contains(point_geom):
         return 0, target_point
 
-    nearest_point_on_exterior, _ = nearest_points(polygon.exterior, point_geom)
-    distance = -round(point_geom.distance(nearest_point_on_exterior))
+    nearest_point_on_boundary, _ = nearest_points(polygon.boundary, point_geom)
+    distance = point_geom.distance(nearest_point_on_boundary)
 
-    return distance, (nearest_point_on_exterior.x, nearest_point_on_exterior.y)
+    return distance, (nearest_point_on_boundary.x, nearest_point_on_boundary.y)
