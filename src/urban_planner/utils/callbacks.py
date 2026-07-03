@@ -2,10 +2,35 @@ import logging
 import os
 
 import numpy as np
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import VecNormalize
 
 logger = logging.getLogger(__name__)
+
+
+class SyncVecNormalizeCallback(BaseCallback):
+    """
+    A callback to synchronize the statistics of the evaluation environment
+    with the training environment before each evaluation. This is crucial
+    when using VecNormalize to ensure that the model is evaluated on
+    the same data distribution it is trained on.
+
+    :param eval_callback: The evaluation callback instance that will be triggered.
+    """
+
+    def __init__(self, eval_callback: EvalCallback):
+        super().__init__(verbose=0)
+        self.eval_callback = eval_callback
+
+    def _on_step(self) -> bool:
+        if self.eval_callback.eval_freq > 0 and self.n_calls % self.eval_callback.eval_freq == 0:
+            if isinstance(self.training_env, VecNormalize) and isinstance(
+                    self.eval_callback.eval_env, VecNormalize):
+                self.eval_callback.eval_env.obs_rms = self.training_env.obs_rms
+                self.eval_callback.eval_env.ret_rms = self.training_env.ret_rms
+                logger.debug("Synced VecNormalize statistics from training to evaluation environment.")
+        return True
 
 
 class MultiObjectiveEvalCallback(EvalCallback):
@@ -86,5 +111,11 @@ class MultiObjectiveEvalCallback(EvalCallback):
                 if self.verbose > 0:
                     logger.info("Saving new best model...")
                 self.model.save(save_path)
+
+                if isinstance(self.training_env, VecNormalize):
+                    stats_path = os.path.join(self.best_model_save_path, "best_model_vec_normalize.pkl")
+                    self.training_env.save(stats_path)
+                    if self.verbose > 0:
+                        logger.info(f"Saved VecNormalize stats for best model to: {stats_path}")
 
         return True
