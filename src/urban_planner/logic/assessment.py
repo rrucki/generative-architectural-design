@@ -1,7 +1,12 @@
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from shapely.geometry import Polygon
 
-from urban_planner.utils.geometry_utils import distance_outside_shape
+from urban_planner.config import TARGET_ANGLE_DEGREES, \
+    ANGLE_TOLERANCE_DEGREES
+from urban_planner.types import Stage
+
+from urban_planner.utils.geometry_utils import distance_to_polygon, \
+    calculate_rectangular_width, calculate_polygon_angles
 
 
 class OutlineAssessment:
@@ -19,7 +24,8 @@ class OutlineAssessment:
     """
     def __init__(self, permitted_plot: Polygon,
                  initial_outline_coords: List[Tuple[int, int]],
-                 area_range: Tuple[int, int]):
+                 area_range: Tuple[int, int],
+                 width_range: Tuple[int, int]):
         """
         Initializes the OutlineAssessment.
 
@@ -27,17 +33,24 @@ class OutlineAssessment:
             permitted_plot: A Shapely Polygon representing the area where the building is allowed.
             initial_outline_coords: The starting coordinates of the building's outline.
             area_range: A tuple (min_area, max_area) defining the target area for the building.
+            width_range: A tuple (min_width, max_width) defining the target width for the building.
         """
         self.permitted_plot = permitted_plot
         self.area_range = area_range
+        self.width_range = width_range
 
         self.current_outline_coords: List[Tuple[int, int]] = []
         self.current_area: int = 0
-        self.outside_shape_distances: List[int] = []
+        self.outside_shape_distances: List[float] = []
         self.nearest_boundary_points: List[Tuple[float, float]] = []
         self.area_difference: int = 0
-        self.checklist: List[bool] = [False, False]
+        self.width_difference: float = 0.0
+        self.angle_differences: List[int] = []
 
+        self.current_width: float = 0.0
+        self.current_angles: List[float] = []
+
+        self.checklist: Dict[Stage, bool] = {stage: False for stage in Stage}
 
     def update(self, new_outline_coords: List[Tuple[int, int]]):
         """
@@ -58,22 +71,51 @@ class OutlineAssessment:
 
         self._check_distances()
         self._check_area_difference()
+        self._check_width()
+        self._check_angles()
         self._update_checklist()
+
+    def _check_width(self) -> None:
+        """Calculates the outline's width and its difference from the target range."""
+        if len(self.current_outline_coords) < 4:
+            self.current_width = 0
+            self.width_difference = self.width_range[1]
+            return
+
+        self.current_width = calculate_rectangular_width(
+            self.current_outline_coords)
+        min_w, max_w = self.width_range
+        if self.current_width < min_w:
+            self.width_difference = min_w - self.current_width
+        elif self.current_width > max_w:
+            self.width_difference = self.current_width - max_w
+        else:
+            self.width_difference = 0
+
+    def _check_angles(self) -> None:
+        """Calculates the outline's angles and their differences from the target."""
+        self.current_angles = calculate_polygon_angles(
+            self.current_outline_coords)
+        self.angle_differences = [
+            int(max(0.0,
+                    abs(angle - TARGET_ANGLE_DEGREES) - ANGLE_TOLERANCE_DEGREES))
+            for angle in self.current_angles
+        ]
 
     def _check_distances(self) -> None:
         """Calculates the distance of each outline vertex to the permitted plot boundary."""
         self.outside_shape_distances = []
         self.nearest_boundary_points = []
         for coord in self.current_outline_coords:
-            distance, nearest_point = distance_outside_shape(self.permitted_plot, coord)
-            self.outside_shape_distances.append(abs(distance))
+            distance, nearest_point = distance_to_polygon(self.permitted_plot, coord)
+            self.outside_shape_distances.append(distance)
             self.nearest_boundary_points.append(nearest_point)
 
     def _check_area_difference(self) -> None:
         """Calculates the difference between the current area and the target area range."""
         min_area, max_area = self.area_range
         if self.current_area < min_area:
-            self.area_difference = min_area - self.current_area
+            self.area_difference = self.current_area - min_area
         elif self.current_area > max_area:
             self.area_difference = self.current_area - max_area
         else:
@@ -81,8 +123,9 @@ class OutlineAssessment:
 
     def _update_checklist(self) -> None:
         """Updates the completion checklist based on the current state."""
-        all_nodes_in_place = all(
+        self.checklist[Stage.PLACEMENT] = all(
             dist == 0 for dist in self.outside_shape_distances)
-
-        self.checklist[0] = all_nodes_in_place
-        self.checklist[1] = (self.area_difference == 0)
+        self.checklist[Stage.AREA] = self.area_difference == 0
+        self.checklist[Stage.WIDTH] = self.width_difference == 0
+        self.checklist[Stage.ANGLE] = all(
+            diff == 0 for diff in self.angle_differences)
