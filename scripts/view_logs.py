@@ -7,7 +7,7 @@ argument, allowing TensorBoard to display each run with a descriptive name
 based on its folder name.
 
 Example:
-    # Launch TensorBoard to view all runs
+    * Launch TensorBoard to view all runs
     python scripts/view_logs.py
 """
 
