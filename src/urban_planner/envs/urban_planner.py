@@ -82,6 +82,10 @@ class UrbanPlannerEnv(gym.Env):
               options: Optional[Dict[str, Any]] = None) -> Tuple[
         Dict[str, np.ndarray], Dict[str, Any]]:
         super().reset(seed=seed)
+        if seed is not None:
+            import random
+            random.seed(seed)
+            np.random.seed(seed)
         self.steps_taken = 0
 
         if self.generation_queue:
