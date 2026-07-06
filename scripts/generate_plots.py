@@ -151,15 +151,18 @@ def plot_figure_1_and_ablation():
         steps_no_cl = np.linspace(0.1, 64.0, 640)
         rewards_no_cl = np.mean(d_no_cl['results'], axis=1)
         
-        smooth_rewards_cl = moving_average(rewards_cl, 30)
-        smooth_rewards_no_cl = moving_average(rewards_no_cl, 30)
+        w_ab = 80
+        smooth_rewards_cl = moving_average(rewards_cl, w_ab)
+        smooth_rewards_no_cl = moving_average(rewards_no_cl, w_ab)
         
-        plt.figure(figsize=(7, 4))
-        # Plot CL-PPO
-        plt.plot(steps_cl, smooth_rewards_cl, color='#1f77b4', linewidth=2.5, label='CL-PPO (Staged Curriculum)')
+        fig, ax = plt.subplots(figsize=(11, 5.8))
+        # Plot CL-PPO raw & smoothed
+        ax.plot(steps_cl, rewards_cl, color='#1f77b4', alpha=0.15, linewidth=0.8)
+        ax.plot(steps_cl, smooth_rewards_cl, color='#1f77b4', linewidth=2.5, label='CL-PPO (Staged Curriculum)')
         
-        # Plot No-CL actual (solid red line)
-        plt.plot(steps_no_cl, smooth_rewards_no_cl, color='red', linestyle='-', linewidth=2, label='PPO No-CL (Actual)')
+        # Plot No-CL actual raw & smoothed (solid red line)
+        ax.plot(steps_no_cl, rewards_no_cl, color='red', alpha=0.15, linewidth=0.8)
+        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='red', linestyle='-', linewidth=2, label='PPO No-CL (Actual)')
         
         # Plot No-CL projected (dashed red line)
         # It goes slightly up from 64M to 100M (10^2), then plateaus.
@@ -172,15 +175,16 @@ def plot_figure_1_and_ablation():
         steps_proj = np.concatenate([steps_proj_climb, steps_proj_flat])
         rewards_proj = np.concatenate([rewards_proj_climb, rewards_proj_flat])
         
-        plt.plot(steps_proj, rewards_proj, color='red', linestyle='--', linewidth=1.5, label='PPO No-CL (Projected Plateau)')
+        ax.plot(steps_proj, rewards_proj, color='red', linestyle='--', linewidth=1.5, label='PPO No-CL (Projected Plateau)')
         
-        plt.xscale('log')
-        plt.xlim(steps_cl[0], steps_cl[-1])
+        ax.set_xscale('log')
+        ax.set_xlim(steps_cl[0], steps_cl[-1])
         
-        plt.xlabel('Training Steps (Millions, Log Scale)', fontsize=10, fontweight='bold')
-        plt.ylabel('Mean Episode Reward', fontsize=10, fontweight='bold')
-        plt.legend(loc='upper left', frameon=True, facecolor='white', framealpha=0.9)
-        plt.grid(True, which='both', linestyle=':', alpha=0.5)
+        ax.set_title("Sample Efficiency & Convergence Comparison (CL-PPO vs. No-CL)", fontsize=12, fontweight="bold", pad=15)
+        ax.set_xlabel('Training Steps (Millions, Log Scale)', fontsize=10, fontweight='bold')
+        ax.set_ylabel('Mean Episode Reward', fontsize=10, fontweight='bold')
+        ax.legend(loc='upper left', frameon=True, facecolor='white', framealpha=0.9, edgecolor='#e0e0e0')
+        ax.grid(True, which='both', linestyle=':', alpha=0.5)
         plt.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure_ablation.png", dpi=300)
         plt.close()
