@@ -158,7 +158,7 @@ def generate_supplementary_plots():
             ax.axvline(x=stage, color='#7f7f7f', linestyle='--', alpha=0.7)
             
         ax.set_xlim(0, 4)
-        ax.set_title("Total and Critic Value Losses (SymLog)", fontsize=12, fontweight="bold", pad=15)
+        # ax.set_title("Total and Critic Value Losses (SymLog)", fontsize=12, fontweight="bold", pad=15)
         ax.set_xlabel("Curriculum Learning Stage & Training Progress", fontsize=10, fontweight='bold')
         ax.set_ylabel("Loss Value (SymLog)", fontsize=10, fontweight='bold')
         ax.set_xticks([0, 1, 2, 3, 4])
@@ -199,7 +199,7 @@ def generate_supplementary_plots():
             
         ax.set_xlim(0, 4)
         ax.set_ylim(-0.0125, 0.001)
-        ax.set_title("Policy Gradient Loss (Linear)", fontsize=12, fontweight="bold", pad=15)
+        # ax.set_title("Policy Gradient Loss (Linear)", fontsize=12, fontweight="bold", pad=15)
         ax.set_xlabel("Curriculum Learning Stage & Training Progress", fontsize=10, fontweight='bold')
         ax.set_ylabel("Loss Value", fontsize=10, fontweight='bold')
         ax.set_xticks([0, 1, 2, 3, 4])
@@ -238,7 +238,7 @@ def generate_supplementary_plots():
             ax.axvline(x=stage, color='#7f7f7f', linestyle='--', alpha=0.7)
             
         ax.set_xlim(0, 4)
-        ax.set_title("Policy Entropy Decay (Exploration vs. Exploitation)", fontsize=12, fontweight="bold", pad=15)
+        # ax.set_title("Policy Entropy Decay (Exploration vs. Exploitation)", fontsize=12, fontweight="bold", pad=15)
         ax.set_xlabel("Curriculum Learning Stage & Training Progress", fontsize=10, fontweight='bold')
         ax.set_ylabel("Policy Entropy", fontsize=10, fontweight='bold')
         ax.set_xticks([0, 1, 2, 3, 4])
@@ -274,7 +274,7 @@ def generate_supplementary_plots():
             
         ax.set_xlim(0, 4)
         ax.set_ylim(0.6, 1.02)
-        ax.set_title("Value Function Explained Variance", fontsize=12, fontweight="bold", pad=15)
+        # ax.set_title("Value Function Explained Variance", fontsize=12, fontweight="bold", pad=15)
         ax.set_xlabel("Curriculum Learning Stage & Training Progress", fontsize=10, fontweight='bold')
         ax.set_ylabel("Explained Variance", fontsize=10, fontweight='bold')
         ax.set_xticks([0, 1, 2, 3, 4])

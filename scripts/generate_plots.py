@@ -180,7 +180,7 @@ def plot_figure_1_and_ablation():
         ax.set_xscale('log')
         ax.set_xlim(steps_cl[0], steps_cl[-1])
         
-        ax.set_title("Sample Efficiency & Convergence Comparison (CL-PPO vs. No-CL)", fontsize=12, fontweight="bold", pad=15)
+        # ax.set_title("Sample Efficiency & Convergence Comparison (CL-PPO vs. No-CL)", fontsize=12, fontweight="bold", pad=15)
         ax.set_xlabel('Training Steps (Millions, Log Scale)', fontsize=10, fontweight='bold')
         ax.set_ylabel('Mean Episode Reward', fontsize=10, fontweight='bold')
         ax.legend(loc='upper left', frameon=True, facecolor='white', framealpha=0.9, edgecolor='#e0e0e0')
