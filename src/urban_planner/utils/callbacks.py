@@ -106,16 +106,64 @@ class MultiObjectiveEvalCallback(EvalCallback):
             if is_new_best:
                 self.best_mean_reward = mean_reward
                 self.best_mean_ep_length = mean_ep_length
-                save_path = os.path.join(self.best_model_save_path,
-                                         "best_model.zip")
-                if self.verbose > 0:
-                    logger.info("Saving new best model...")
-                self.model.save(save_path)
-
-                if isinstance(self.training_env, VecNormalize):
-                    stats_path = os.path.join(self.best_model_save_path, "best_model_vec_normalize.pkl")
-                    self.training_env.save(stats_path)
+                if self.best_model_save_path is not None:
+                    self.model.save(
+                        os.path.join(self.best_model_save_path, "best_model"))
+                    if isinstance(self.training_env, VecNormalize):
+                        self.training_env.save(
+                            os.path.join(self.best_model_save_path,
+                                         "best_model_vec_normalize.pkl"))
                     if self.verbose > 0:
-                        logger.info(f"Saved VecNormalize stats for best model to: {stats_path}")
+                        logger.info(
+                            f"Saving new best model to {self.best_model_save_path}")
 
         return True
+
+
+class GradientNormCallback(BaseCallback):
+    """
+    Logs the L2 norm of the policy gradients to TensorBoard and CSV.
+    Uses an optimizer pre-step hook so gradient norms are captured during actual
+    PPO/A2C minibatch updates rather than during no_grad rollout collection.
+    """
+
+    def __init__(self, log_freq: int = 1000, verbose: int = 0):
+        super().__init__(verbose)
+        self.log_freq = log_freq
+        self._batch_grad_norms = []
+        self.batch_grad_norms = []
+        self._hook_handle = None
+
+    def _on_training_start(self) -> None:
+        def _pre_step_hook(optimizer, args, kwargs):
+            total_norm_sq = 0.0
+            has_grad = False
+            for p in self.model.policy.parameters():
+                if p.grad is not None:
+                    has_grad = True
+                    param_norm = p.grad.detach().data.norm(2).item()
+                    total_norm_sq += param_norm * param_norm
+            if has_grad:
+                self._batch_grad_norms.append(total_norm_sq ** 0.5)
+
+        if hasattr(self.model.policy, "optimizer") and hasattr(
+            self.model.policy.optimizer, "register_step_pre_hook"
+        ):
+            self._hook_handle = self.model.policy.optimizer.register_step_pre_hook(
+                _pre_step_hook
+            )
+
+    def _on_rollout_start(self) -> None:
+        if self._batch_grad_norms:
+            mean_norm = float(np.mean(self._batch_grad_norms))
+            self.batch_grad_norms.append(mean_norm)
+            self.logger.record("train/policy_grad_norm", mean_norm)
+            self._batch_grad_norms.clear()
+
+    def _on_step(self) -> bool:
+        return True
+
+    def _on_training_end(self) -> None:
+        if self._hook_handle is not None:
+            self._hook_handle.remove()
+            self._hook_handle = None

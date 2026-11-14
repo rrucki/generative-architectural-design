@@ -57,7 +57,11 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNorm
 import urban_planner
 from urban_planner.envs.generation_manager import EnvironmentGenerator
 from urban_planner.logger_config import setup_logging
-from urban_planner.utils.callbacks import MultiObjectiveEvalCallback, SyncVecNormalizeCallback
+from urban_planner.utils.callbacks import (
+    MultiObjectiveEvalCallback,
+    SyncVecNormalizeCallback,
+    GradientNormCallback,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
@@ -253,10 +257,12 @@ def train_agent(args: argparse.Namespace) -> None:
             logger.info(
                 "Launch TensorBoard to monitor progress: python scripts/view_logs.py")
 
+            grad_callback = GradientNormCallback(log_freq=1000)
+
             # Resume logging in the same file if resuming a run, otherwise start fresh.
             model.learn(
                 total_timesteps=args.total_timesteps,
-                callback=CallbackList([sync_callback, eval_callback]),
+                callback=CallbackList([sync_callback, eval_callback, grad_callback]),
                 tb_log_name=base_name,
                 reset_num_timesteps=not args.resume_run_name
             )

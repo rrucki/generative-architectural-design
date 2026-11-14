@@ -123,6 +123,9 @@ __marimo__/
 /models/
 /archive_logs/
 /archive_models/
+*.zip
 
-# Manuscript drafts and guidelines
+# Local agent instructions & manuscript repository (keep off public repo)
+/AGENTS.md
+/.agents/
 /manuscript/
