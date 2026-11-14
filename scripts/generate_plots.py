@@ -338,71 +338,30 @@ def plot_figure_3_efficiency():
             d = json.load(f)
         
         raw_res = d['raw_results']
-        episodes = np.arange(len(raw_res['CL-PPO']))
         
-        cl_solved = np.array([ep['solved'] for ep in raw_res['CL-PPO']])
-        cl_steps = np.array([ep['steps'] for ep in raw_res['CL-PPO']])
+        steps_cl = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CL-PPO']])
+        steps_mcg = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['MC-Global']])
         
-        # Identify instances recovered by hybrid continuous polish (unsolved by discrete RL, solved by Polish)
-        hyb_rec_mask = np.array([not ep_c['solved'] and ep_h['solved'] 
-                                 for ep_c, ep_h in zip(raw_res['CL-PPO'], raw_res['CL-PPO + Polish'])])
-        hyb_steps = np.array([ep['steps'] for ep in raw_res['CL-PPO + Polish']])
-        
-        cma_solved = np.array([ep['solved'] for ep in raw_res['CMA-ES']])
-        cma_steps = np.array([ep['steps'] for ep in raw_res['CMA-ES']])
-        
-        mcg_solved = np.array([ep['solved'] for ep in raw_res['MC-Global']])
-        mcg_steps = np.array([ep['steps'] for ep in raw_res['MC-Global']])
-        
+        episodes = np.arange(len(steps_cl))
         fig, ax = plt.subplots(figsize=(14.5, 7.5))
         
-        # 1. Unsolved ceiling line & markers
-        ax.axhline(y=100000, color='#64748B', linestyle='--', linewidth=1.3, alpha=0.8, zorder=1)
-        ax.text(12, 115000, r'Unsolved Ceiling ($10^5$ Budget Limit; includes 182 mathematically incompatible $\mathcal{F}=\emptyset$ parcels)', 
-                fontsize=11.0, color='#334155', style='italic', fontweight='bold', zorder=10)
-        h_ceil = ax.scatter(episodes[~cl_solved], np.full(np.sum(~cl_solved), 100000), 
-                            color='#94A3B8', marker='.', s=15, alpha=0.4, zorder=1,
-                            label=r'Unsolved Ceiling ($10^5$ Budget Limit / $\mathcal{F}=\emptyset$ Incompatible)')
-        
-        # 2. Solved instances: MC-Global (zorder 2)
-        h_mcg = ax.scatter(episodes[mcg_solved], mcg_steps[mcg_solved], 
-                           color='#EF4444', alpha=0.45, s=18, zorder=2,
-                           label='MC-Global (47.6% Solved, Stochastic Rejection)')
-        
-        # 3. CMA-ES (zorder 3)
-        h_cma = ax.scatter(episodes[cma_solved], cma_steps[cma_solved], 
-                           color='#F59E0B', alpha=0.45, s=20, zorder=3,
-                           label='CMA-ES (80.4% Solved, Evolutionary Optimization)')
-        
-        # 4. CL-PPO + Local Polish Recovery (zorder 5)
-        h_hyb = ax.scatter(episodes[hyb_rec_mask], hyb_steps[hyb_rec_mask], 
-                           color='#10B981', marker='D', s=38, edgecolors='#064e3b', linewidth=1.0, alpha=0.95, zorder=5,
-                           label='CL-PPO + Local Polish (+10.0% Solved via Continuous Polish)')
-        
-        # 5. CL-PPO Standalone Feed-Forward Policy (zorder 6, bold and on top so it is crisp and never covered!)
-        h_cl = ax.scatter(episodes[cl_solved], cl_steps[cl_solved], 
-                          color='#1E40AF', alpha=0.75, s=26, zorder=6,
-                          label='CL-PPO Standalone (71.4% Solved, Single Forward Rollout)')
+        ax.scatter(episodes, steps_cl, color='#1E3A8A', alpha=0.5, s=18, label='CL-PPO (Single Forward Rollout)')
+        if 'CL-PPO + Polish' in raw_res:
+            steps_hyb = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CL-PPO + Polish']])
+            ax.scatter(episodes, steps_hyb, color='#10B981', alpha=0.45, s=18, label='CL-PPO + Local Polish (Hybrid)')
+        if 'CMA-ES' in raw_res:
+            steps_cma = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CMA-ES']])
+            ax.scatter(episodes, steps_cma, color='#F59E0B', alpha=0.45, s=18, label='CMA-ES (Evolutionary)')
+        ax.scatter(episodes, steps_mcg, color='#d62728', alpha=0.5, s=18, label='MC-Global (Stochastic Rejection)')
         
         ax.set_yscale('log')
-        ax.set_ylim(25, 175000)
-        ax.set_xlim(0, 1000)
+        ax.set_ylim(28, 150000)
+        ax.set_xlim(0, len(steps_cl))
         
         ax.set_xlabel('Evaluation Episode Index (Chronological)', fontsize=13.5, fontweight='bold')
         ax.set_ylabel('Computational Budget (Steps / Evaluations, Log Scale)', fontsize=13.5, fontweight='bold')
         ax.tick_params(axis='both', which='major', labelsize=11.5)
-        
-        # Explicit legend order: proposed methods first, baselines, then ceiling
-        legend_handles = [h_cl, h_hyb, h_cma, h_mcg, h_ceil]
-        legend_labels = [
-            'CL-PPO Standalone Policy (71.4% Feasibility, 66.6 ± 23.1 steps)',
-            'CL-PPO + Local Polish Recovery (+10.0% Solved, 109.0 ± 146.8 total)',
-            'CMA-ES (80.4% Feasibility, 388.4 ± 135.3 evals)',
-            'MC-Global (47.6% Feasibility, 34,577.2 ± 26,816.5 evals)',
-            r'Unsolved Ceiling ($10^5$ Cutoff / $\mathcal{F}=\emptyset$ Incompatible)'
-        ]
-        ax.legend(legend_handles, legend_labels, loc='center right', frameon=True, facecolor='white', framealpha=0.95, fontsize=11.0)
-        
+        ax.legend(loc='center right', frameon=True, facecolor='white', framealpha=0.95, fontsize=12.0)
         plt.grid(True, which='both', linestyle=':', alpha=0.5)
         plt.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure3.png", dpi=300)
