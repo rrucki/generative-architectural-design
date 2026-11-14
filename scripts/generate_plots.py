@@ -540,12 +540,23 @@ def plot_failure_cases_analysis():
             a_min, a_max = u.plot.area_range
             min_rect_area = int(w_min ** 2)
             ax.set_title(f"Category A (Over-Constrained): Seed {seed}", fontsize=9.5, fontweight='bold')
+            if min_rect_area * np.sin(np.radians(85)) > a_max:
+                conflict_text = (
+                    f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
+                    f"Target Width: [{w_min}, {w_max}] px\n"
+                    f"Min Ortho Area: {min_rect_area//1000}k > {a_max//1000}k!\n"
+                    f"Empty Feasible Set (F = ∅)"
+                )
+            else:
+                conflict_text = (
+                    f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
+                    f"Target Width: [{w_min}, {w_max}] px\n"
+                    f"Setback Bottleneck < W_min ({w_min} px)\n"
+                    f"Empty Feasible Set (F = ∅)"
+                )
             ax.text(
                 0.04, 0.95,
-                f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
-                f"Target Width: [{w_min}, {w_max}] px\n"
-                f"Min Ortho Area (W_min²): {min_rect_area//1000}k > {a_max//1000}k!\n"
-                f"Empty Feasible Set (F = ∅)",
+                conflict_text,
                 transform=ax.transAxes, fontsize=7.8, fontweight='bold',
                 va='top', ha='left', color='#92400e',
                 bbox=dict(facecolor='#fef3c7', edgecolor='#d97706', alpha=0.92, boxstyle='round,pad=0.25')
