@@ -138,8 +138,8 @@ def plot_figure_1_and_ablation():
         # Mark 90% asymptotic convergence threshold inside Stage 3 & Stage 4 vs extended stability plateau
         ax1.axvline(x=3.011, color='#2ca02c', linestyle=':', linewidth=1.6, alpha=0.9)
         ax1.text(3.52, 2350, '90% Asymptotic Plateau Reached\n(~169M Cumulative Active Steps)\nRemaining Budget: Stability Verification',
-                 fontsize=7.5, ha='center', color='#1b5e20', fontweight='bold',
-                 bbox=dict(facecolor='#e8f5e9', edgecolor='#2ca02c', alpha=0.9, boxstyle='round,pad=0.3'))
+                 fontsize=9.5, ha='center', color='#1b5e20', fontweight='bold',
+                 bbox=dict(facecolor='#e8f5e9', edgecolor='#2ca02c', alpha=0.9, boxstyle='round,pad=0.35'))
         
         fig.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure1.png", dpi=300)
@@ -162,30 +162,32 @@ def plot_figure_1_and_ablation():
         smooth_rewards_cl = moving_average(rewards_cl, w_ab)
         smooth_rewards_no_cl = moving_average(rewards_no_cl, w_ab)
         
-        fig, ax = plt.subplots(figsize=(11, 5.8))
+        fig, ax = plt.subplots(figsize=(12, 6.2))
         # Plot CL-PPO raw & smoothed
-        ax.plot(steps_cl, rewards_cl, color='#1f77b4', alpha=0.15, linewidth=0.8)
-        ax.plot(steps_cl, smooth_rewards_cl, color='#1f77b4', linewidth=2.5, label='4-Stage CL-PPO (Staged Curriculum, 0–2.18B Steps)')
+        ax.plot(steps_cl, rewards_cl, color='#1f77b4', alpha=0.15, linewidth=1.0)
+        ax.plot(steps_cl, smooth_rewards_cl, color='#1f77b4', linewidth=3.0, label='4-Stage CL-PPO (Staged Curriculum, 0–2.18B Steps)')
         
         # Plot No-CL actual raw & smoothed (solid red line, empirical 64M run only — zero synthetic projection)
-        ax.plot(steps_no_cl, rewards_no_cl, color='#d62728', alpha=0.15, linewidth=0.8)
-        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='#d62728', linestyle='-', linewidth=2.3, label='1-Stage PPO No-CL (Empirical 0–64M Run, Terminated at Local Minimum)')
-        ax.scatter([64.0], [smooth_rewards_no_cl[-1]], color='#d62728', s=45, zorder=6)
+        ax.plot(steps_no_cl, rewards_no_cl, color='#d62728', alpha=0.15, linewidth=1.0)
+        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='#d62728', linestyle='-', linewidth=2.8, label='1-Stage PPO No-CL (Empirical 0–64M Run, Terminated at Local Minimum)')
+        ax.scatter([64.0], [smooth_rewards_no_cl[-1]], color='#d62728', s=70, zorder=6)
         ax.annotate(
             'Empirical No-CL Plateau (~1001 Reward, 0.1% Feasibility)\nTerminated at 64M Steps due to Policy Collapse',
             xy=(64.0, smooth_rewards_no_cl[-1]),
-            xytext=(95.0, smooth_rewards_no_cl[-1] - 280),
-            arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2),
-            fontsize=8.5, fontweight='bold', color='#991b1b',
-            bbox=dict(facecolor='#fef2f2', edgecolor='#d62728', alpha=0.9, boxstyle='round,pad=0.3')
+            xytext=(90.0, smooth_rewards_no_cl[-1] - 320),
+            arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.5),
+            fontsize=11.5, fontweight='bold', color='#991b1b',
+            bbox=dict(facecolor='#fef2f2', edgecolor='#d62728', alpha=0.92, boxstyle='round,pad=0.35')
         )
         
         ax.set_xscale('log')
         ax.set_xlim(steps_cl[0], steps_cl[-1])
         
-        ax.set_xlabel('Training Steps (Millions, Log Scale)', fontsize=10, fontweight='bold')
-        ax.set_ylabel('Mean Episode Reward', fontsize=10, fontweight='bold')
-        ax.legend(loc='upper left', frameon=True, facecolor='white', framealpha=0.9, edgecolor='#e0e0e0')
+        ax.set_xlabel('Training Steps (Millions, Log Scale)', fontsize=13.0, fontweight='bold')
+        ax.set_ylabel('Mean Episode Reward', fontsize=13.0, fontweight='bold')
+        ax.tick_params(axis='both', which='major', labelsize=11.5)
+        ax.tick_params(axis='both', which='minor', labelsize=10.0)
+        ax.legend(loc='upper left', frameon=True, facecolor='white', framealpha=0.95, edgecolor='#cccccc', fontsize=11.5)
         ax.grid(True, which='both', linestyle=':', alpha=0.5)
         plt.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure_ablation.png", dpi=300)
@@ -218,29 +220,29 @@ def plot_figure_2_layouts():
         setup_logger.info(f"Using hardcoded feasible seeds: {seeds}")
             
         # Draw on a single large canvas to create a perfect continuous table grid
-        # Set large height (9x12.5) and equal aspect ratio to ensure zero geometric distortion and square cells
-        fig, ax = plt.subplots(figsize=(9, 12.5))
+        # Set landscape dimensions (14.0 x 10.8) and equal aspect ratio (4 columns x 3 rows) for full A4 landscape visibility
+        fig, ax = plt.subplots(figsize=(14.0, 10.8))
         
         # Grid dimensions:
-        # 3 columns, each 100 units wide. Total width = 300.
-        # 4 rows, each 100 units high. Total height = 400.
-        ax.set_xlim(0, 300)
-        ax.set_ylim(-25, 400) # extra space at the bottom for the legend
+        # 4 columns, each 100 units wide. Total width = 400.
+        # 3 rows, each 100 units high. Total height = 300.
+        ax.set_xlim(0, 400)
+        ax.set_ylim(-30, 300) # extra space at the bottom for the legend
         ax.set_aspect('equal')
         
         # Draw vertical grid lines
-        for x in [0, 100, 200, 300]:
-            ax.plot([x, x], [0, 400], color='#cccccc', linewidth=1.2, zorder=10)
+        for x in [0, 100, 200, 300, 400]:
+            ax.plot([x, x], [0, 300], color='#cccccc', linewidth=1.4, zorder=10)
         # Draw horizontal grid lines
-        for y in [0, 100, 200, 300, 400]:
-            ax.plot([0, 300], [y, y], color='#cccccc', linewidth=1.2, zorder=10)
+        for y in [0, 100, 200, 300]:
+            ax.plot([0, 400], [y, y], color='#cccccc', linewidth=1.4, zorder=10)
             
         # Unified legend markers tracker
         legend_handles = {}
         
         for idx, seed in enumerate(seeds):
-            c = idx % 3      # Column index
-            r = idx // 3     # Row index
+            c = idx % 4      # Column index (0..3)
+            r = idx // 4     # Row index (0..2)
             
             # Recreate environment for each seed to ensure independent evaluation and prevent state leakage
             eval_env = gym.make('UrbanPlanner-v0', **env_kwargs)
@@ -277,11 +279,11 @@ def plot_figure_2_layouts():
             
             # Map layout to drawing compartment inside the cell:
             # cell width = 100, height = 100 (SQUARE cell proportions).
-            # drawing compartment: X in [100c+6, 100(c+1)-6], Y in [100(3-r)+6, 100(4-r)-6]
+            # drawing compartment: X in [100c+6, 100(c+1)-6], Y in [100(2-r)+6, 100(3-r)-6]
             cell_x_min = 100 * c + 6
             cell_x_max = 100 * (c + 1) - 6
-            cell_y_min = 100 * (3 - r) + 6
-            cell_y_max = 100 * (4 - r) - 6
+            cell_y_min = 100 * (2 - r) + 6
+            cell_y_max = 100 * (3 - r) - 6
             
             cx = (cell_x_min + cell_x_max) / 2
             cy = (cell_y_min + cell_y_max) / 2
@@ -299,21 +301,21 @@ def plot_figure_2_layouts():
             m_building = map_coords(building_coords)
             
             # Plot property boundary (grey dashed line)
-            l1, = ax.plot(m_plot[:, 0], m_plot[:, 1], color='#888888', linestyle='--', linewidth=1.2)
+            l1, = ax.plot(m_plot[:, 0], m_plot[:, 1], color='#888888', linestyle='--', linewidth=1.6)
             legend_handles['Property Boundary'] = l1
             
             # Plot permitted buildable zone (soft lavender fill)
             f1 = ax.fill(m_envelope[:, 0], m_envelope[:, 1], color='#9b59b6', alpha=0.18)[0]
-            l2, = ax.plot(m_envelope[:, 0], m_envelope[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0)
+            l2, = ax.plot(m_envelope[:, 0], m_envelope[:, 1], color='#9b59b6', linestyle=':', linewidth=1.3)
             legend_handles['Permitted Buildable Zone'] = (f1, l2)
             
             # Plot building footprint outline (bold dark slate)
-            l3, = ax.plot(m_building[:, 0], m_building[:, 1], color='#2c3e50', linewidth=2.3)
-            ax.scatter(m_building[:-1, 0], m_building[:-1, 1], color='#2c3e50', zorder=5, s=15)
+            l3, = ax.plot(m_building[:, 0], m_building[:, 1], color='#2c3e50', linewidth=3.0)
+            ax.scatter(m_building[:-1, 0], m_building[:-1, 1], color='#2c3e50', zorder=5, s=32)
             legend_handles['Generated Building Outline'] = l3
             
             # Draw simple text ID in the top-left corner of the cell
-            ax.text(100 * c + 8, 100 * (4 - r) - 8, f"{idx + 1}", fontsize=13.0, fontweight='bold', color='#2c3e50',
+            ax.text(100 * c + 8, 100 * (3 - r) - 8, f"{idx + 1}", fontsize=18.0, fontweight='bold', color='#2c3e50',
                     va='top', ha='left', zorder=15)
             
         # Hide standard spines and tick marks
@@ -325,7 +327,7 @@ def plot_figure_2_layouts():
         # Unified legend below the table
         legend_labels = ['Property Boundary', 'Permitted Buildable Zone', 'Generated Building Outline']
         legend_objs = [legend_handles[l] for l in legend_labels]
-        ax.legend(legend_objs, legend_labels, loc='lower center', ncol=3, frameon=True, edgecolor='#cccccc', facecolor='white', framealpha=0.9, fontsize=10, bbox_to_anchor=(0.5, 0.005))
+        ax.legend(legend_objs, legend_labels, loc='lower center', ncol=3, frameon=True, edgecolor='#cccccc', facecolor='white', framealpha=0.95, fontsize=13.0, bbox_to_anchor=(0.5, 0.005))
         
         plt.subplots_adjust(top=0.99, bottom=0.04)
         plt.savefig(OUTPUT_DIR / "figure2.png", dpi=300, bbox_inches='tight', pad_inches=0.02)
@@ -403,7 +405,7 @@ def plot_side_by_side_comparison():
             "SLSQP (1-Start Gradient)",
         ]
 
-        fig, axes = plt.subplots(len(seeds), 4, figsize=(14.0, 9.8))
+        fig, axes = plt.subplots(len(seeds), 4, figsize=(16.5, 11.0))
 
         for r_idx, seed in enumerate(seeds):
             # 1. Run pure CL-PPO
@@ -456,26 +458,26 @@ def plot_side_by_side_comparison():
             for c_idx, (b_coords, is_ok, st_cnt, o_dev) in enumerate(row_entries):
                 ax = axes[r_idx, c_idx]
                 if r_idx == 0:
-                    ax.set_title(method_titles[c_idx], fontsize=10.5, fontweight='bold', pad=8)
+                    ax.set_title(method_titles[c_idx], fontsize=14.5, fontweight='bold', pad=10)
 
-                ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.1, label='Parcel Boundary')
-                ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.16)
-                ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0, label='Buildable Zone')
+                ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.6, label='Parcel Boundary')
+                ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.18)
+                ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.3, label='Buildable Zone')
 
                 b_arr = np.array(list(b_coords) + [b_coords[0]])
                 b_col = '#15803d' if is_ok else '#dc2626'
                 ax.fill(b_arr[:, 0], b_arr[:, 1], color=b_col, alpha=0.22)
-                ax.plot(b_arr[:, 0], b_arr[:, 1], color=b_col, linewidth=2.2)
-                ax.scatter(b_arr[:-1, 0], b_arr[:-1, 1], color=b_col, s=16, zorder=5)
+                ax.plot(b_arr[:, 0], b_arr[:, 1], color=b_col, linewidth=3.0)
+                ax.scatter(b_arr[:-1, 0], b_arr[:-1, 1], color=b_col, s=32, zorder=5)
 
                 status_txt = "FEASIBLE" if is_ok else "VIOLATED"
                 badge_bg = '#dcfce7' if is_ok else '#fee2e2'
                 ax.text(
                     0.04, 0.95,
                     f"Seed {seed} | {status_txt}\nSteps/Evals: {st_cnt}\nOrtho Dev: {o_dev:.1f}°",
-                    transform=ax.transAxes, fontsize=8.0, fontweight='bold',
+                    transform=ax.transAxes, fontsize=11.0, fontweight='bold',
                     va='top', ha='left', color=b_col,
-                    bbox=dict(facecolor=badge_bg, edgecolor=b_col, alpha=0.92, boxstyle='round,pad=0.25')
+                    bbox=dict(facecolor=badge_bg, edgecolor=b_col, alpha=0.95, boxstyle='round,pad=0.35')
                 )
                 ax.set_aspect('equal')
                 pad = 80
@@ -513,7 +515,7 @@ def plot_failure_cases_analysis():
         cat_a_seeds = [3, 6, 7]      # Over-constrained zoning (W_min^2 * sin(85°) > A_max)
         cat_b_seeds = [8, 20, 28]    # Discrete horizon truncation resolved by Hybrid Polish
 
-        fig, axes = plt.subplots(2, 3, figsize=(13.5, 8.2))
+        fig, axes = plt.subplots(2, 3, figsize=(16.5, 10.5))
 
         for col_idx, seed in enumerate(cat_a_seeds):
             ax = axes[0, col_idx]
@@ -530,16 +532,16 @@ def plot_failure_cases_analysis():
             env_poly = np.array(list(u.plot.permitted_outline.exterior.coords))
             b_arr = np.array(list(u.outline.coords) + [u.outline.coords[0]])
 
-            ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.1)
-            ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.16)
-            ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0)
-            ax.fill(b_arr[:, 0], b_arr[:, 1], color='#d97706', alpha=0.20)
-            ax.plot(b_arr[:, 0], b_arr[:, 1], color='#d97706', linewidth=2.1, label='CL-PPO Best Compromise')
+            ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.6)
+            ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.18)
+            ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.3)
+            ax.fill(b_arr[:, 0], b_arr[:, 1], color='#d97706', alpha=0.22)
+            ax.plot(b_arr[:, 0], b_arr[:, 1], color='#d97706', linewidth=3.0, label='CL-PPO Best Compromise')
 
             w_min, w_max = u.plot.width_range
             a_min, a_max = u.plot.area_range
             min_rect_area = int(w_min ** 2)
-            ax.set_title(f"Category A (Over-Constrained): Seed {seed}", fontsize=9.5, fontweight='bold')
+            ax.set_title(f"Category A (Over-Constrained): Seed {seed}", fontsize=14.0, fontweight='bold')
             if min_rect_area * np.sin(np.radians(85)) > a_max:
                 conflict_text = (
                     f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
@@ -557,9 +559,9 @@ def plot_failure_cases_analysis():
             ax.text(
                 0.04, 0.95,
                 conflict_text,
-                transform=ax.transAxes, fontsize=7.8, fontweight='bold',
+                transform=ax.transAxes, fontsize=11.0, fontweight='bold',
                 va='top', ha='left', color='#92400e',
-                bbox=dict(facecolor='#fef3c7', edgecolor='#d97706', alpha=0.92, boxstyle='round,pad=0.25')
+                bbox=dict(facecolor='#fef3c7', edgecolor='#d97706', alpha=0.95, boxstyle='round,pad=0.35')
             )
             ax.set_aspect('equal')
             pad = 70
@@ -590,26 +592,26 @@ def plot_failure_cases_analysis():
             ppo_arr = np.array(ppo_coords + [ppo_coords[0]])
             hyb_arr = np.array(list(hyb_coords) + [hyb_coords[0]])
 
-            ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.1)
-            ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.16)
-            ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0)
+            ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.6)
+            ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.18)
+            ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.3)
 
-            ax.plot(ppo_arr[:, 0], ppo_arr[:, 1], color='#ef4444', linestyle='--', linewidth=1.8, label='CL-PPO at T=256 (Truncated)')
+            ax.plot(ppo_arr[:, 0], ppo_arr[:, 1], color='#ef4444', linestyle='--', linewidth=2.4, label='CL-PPO at T=256 (Truncated)')
             ax.fill(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', alpha=0.22)
-            ax.plot(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', linewidth=2.2, label='CL-PPO + Local Polish (Solved)')
+            ax.plot(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', linewidth=3.0, label='CL-PPO + Local Polish (Solved)')
 
-            ax.set_title(f"Category B (Sub-Grid Truncation): Seed {seed}", fontsize=9.5, fontweight='bold')
+            ax.set_title(f"Category B (Sub-Grid Truncation): Seed {seed}", fontsize=14.0, fontweight='bold')
             ax.text(
                 0.04, 0.95,
                 f"CL-PPO (T=256): ΔW={ppo_w_diff:.0f}px, ΔA={ppo_a_diff//1000}k\n"
                 f"Hybrid Polish: SOLVED (+{hyb_res['polish_evals']} evals)\n"
                 f"Final Ortho Dev: {hyb_res['ortho_deviation']:.2f}°",
-                transform=ax.transAxes, fontsize=7.8, fontweight='bold',
+                transform=ax.transAxes, fontsize=11.0, fontweight='bold',
                 va='top', ha='left', color='#166534',
-                bbox=dict(facecolor='#dcfce7', edgecolor='#15803d', alpha=0.92, boxstyle='round,pad=0.25')
+                bbox=dict(facecolor='#dcfce7', edgecolor='#15803d', alpha=0.95, boxstyle='round,pad=0.35')
             )
             if col_idx == 2:
-                ax.legend(loc='lower right', fontsize=7.5, frameon=True, facecolor='white')
+                ax.legend(loc='lower right', fontsize=11.0, frameon=True, facecolor='white')
             ax.set_aspect('equal')
             pad = 70
             ax.set_xlim(min(plot_poly[:, 0]) - pad, max(plot_poly[:, 0]) + pad)
