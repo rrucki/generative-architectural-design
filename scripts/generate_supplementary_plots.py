@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import struct
 from tensorboard.compat.proto import event_pb2
 
-PROJECT_ROOT = Path("/Users/rafalrucki/Documents/IT/generative-architectural-design")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = PROJECT_ROOT / "logs"
 OUTPUT_DIR = PROJECT_ROOT / "manuscript" / "figures"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -289,6 +289,45 @@ def generate_supplementary_plots():
         plt.tight_layout()
         plt.savefig(OUTPUT_DIR / "supplementary_explained_variance.png", dpi=300)
         plt.close()
+
+    # 4. Plot Direct Diagnostic Comparison: CL-PPO (Stage 1) vs PPO No-CL (Stage 4 from scratch) over 0-64M steps
+    print("Plotting CL-PPO vs No-CL diagnostic comparison...")
+    no_cl_data = extract_run_data("ppo_no_cl_1783091653", tags)
+    s1_data = {tag: data[tag][0] for tag in tags}
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.5, 7.5))
+    panel_specs = [
+        ("train/policy_gradient_loss", "Policy Gradient Loss", axes[0, 0], False, False),
+        ("train/value_loss", "Critic Value Loss (Log Scale)", axes[0, 1], True, False),
+        ("train/entropy_loss", "Policy Entropy", axes[1, 0], False, True),
+        ("train/explained_variance", "Critic Explained Variance", axes[1, 1], False, False),
+    ]
+
+    for tag, title, ax_p, use_log, negate in panel_specs:
+        st_cl, vl_cl = s1_data[tag]
+        st_nc, vl_nc = no_cl_data[tag]
+        if negate:
+            vl_cl = -vl_cl
+            vl_nc = -vl_nc
+        x_cl_m = st_cl / 1e6
+        x_nc_m = st_nc / 1e6
+        w_p = 50
+        ax_p.plot(x_cl_m, vl_cl, color="#1E3A8A", alpha=0.15, linewidth=0.6)
+        ax_p.plot(x_nc_m, vl_nc, color="#DC2626", alpha=0.15, linewidth=0.6)
+        if len(vl_cl) > 0:
+            ax_p.plot(x_cl_m, moving_average(vl_cl, w_p), color="#1E3A8A", linewidth=2.0, label="CL-PPO (Stage 1)")
+        if len(vl_nc) > 0:
+            ax_p.plot(x_nc_m, moving_average(vl_nc, w_p), color="#DC2626", linewidth=2.0, linestyle="--", label="PPO No-CL (All 4 Objectives)")
+        if use_log:
+            ax_p.set_yscale("log")
+        ax_p.set_title(title, fontsize=10, fontweight="bold")
+        ax_p.set_xlabel("Training Steps (Millions)", fontsize=9)
+        ax_p.set_xlim(0, 64)
+        ax_p.legend(loc="best", frameon=True, facecolor="white", fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig(OUTPUT_DIR / "supplementary_nocl_vs_cl_diagnostics.png", dpi=300)
+    plt.close()
 
     print("Supplementary plots generated successfully!")
 

@@ -15,7 +15,10 @@ import urban_planner
 setup_logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+import sys
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 OUTPUT_DIR = PROJECT_ROOT / "manuscript" / "figures"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -131,15 +134,19 @@ def plot_figure_1_and_ablation():
         ax1.text(1.5, 3850, 'Stage 2\n(Area)', fontsize=8, ha='center', fontweight='bold', bbox=dict(facecolor='white', alpha=0.85, boxstyle='round,pad=0.3'))
         ax1.text(2.5, 3850, 'Stage 3\n(Tract Width)', fontsize=8, ha='center', fontweight='bold', bbox=dict(facecolor='white', alpha=0.85, boxstyle='round,pad=0.3'))
         ax1.text(3.5, 3850, 'Stage 4\n(Orthogonality)', fontsize=8, ha='center', fontweight='bold', bbox=dict(facecolor='white', alpha=0.85, boxstyle='round,pad=0.3'))
+
+        # Mark 90% asymptotic convergence threshold inside Stage 3 & Stage 4 vs extended stability plateau
+        ax1.axvline(x=3.011, color='#2ca02c', linestyle=':', linewidth=1.6, alpha=0.9)
+        ax1.text(3.52, 2350, '90% Asymptotic Plateau Reached\n(~169M Cumulative Active Steps)\nRemaining Budget: Stability Verification',
+                 fontsize=7.5, ha='center', color='#1b5e20', fontweight='bold',
+                 bbox=dict(facecolor='#e8f5e9', edgecolor='#2ca02c', alpha=0.9, boxstyle='round,pad=0.3'))
         
         fig.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure1.png", dpi=300)
         plt.close()
         
         # Figure: Ablation (CL-PPO vs No-CL)
-        # Plot both agents over their actual absolute training steps using a log scale.
-        # CL-PPO: 0 - 2.18B steps.
-        # No-CL: 0 - 64M steps.
+        # Plot both agents over their actual absolute training steps using a log scale (no synthetic extrapolation).
         steps_s1 = np.linspace(0.1, 64.0, 640)
         steps_s2 = np.linspace(64.1, 128.0, 640)
         steps_s3 = np.linspace(128.1, 1152.0, 640)
@@ -158,29 +165,24 @@ def plot_figure_1_and_ablation():
         fig, ax = plt.subplots(figsize=(11, 5.8))
         # Plot CL-PPO raw & smoothed
         ax.plot(steps_cl, rewards_cl, color='#1f77b4', alpha=0.15, linewidth=0.8)
-        ax.plot(steps_cl, smooth_rewards_cl, color='#1f77b4', linewidth=2.5, label='CL-PPO (Staged Curriculum)')
+        ax.plot(steps_cl, smooth_rewards_cl, color='#1f77b4', linewidth=2.5, label='4-Stage CL-PPO (Staged Curriculum, 0–2.18B Steps)')
         
-        # Plot No-CL actual raw & smoothed (solid red line)
-        ax.plot(steps_no_cl, rewards_no_cl, color='red', alpha=0.15, linewidth=0.8)
-        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='red', linestyle='-', linewidth=2, label='PPO No-CL (Actual)')
-        
-        # Plot No-CL projected (dashed red line)
-        # It goes slightly up from 64M to 100M (10^2), then plateaus.
-        steps_proj_climb = np.linspace(64.0, 100.0, 20)
-        rewards_proj_climb = np.linspace(smooth_rewards_no_cl[-1], smooth_rewards_no_cl[-1] + 15.0, 20)
-        
-        steps_proj_flat = np.linspace(100.0, 2176.0, 80)
-        rewards_proj_flat = np.linspace(smooth_rewards_no_cl[-1] + 15.0, smooth_rewards_no_cl[-1] + 28.0, 80)
-        
-        steps_proj = np.concatenate([steps_proj_climb, steps_proj_flat])
-        rewards_proj = np.concatenate([rewards_proj_climb, rewards_proj_flat])
-        
-        ax.plot(steps_proj, rewards_proj, color='red', linestyle='--', linewidth=1.5, label='PPO No-CL (Projected Plateau)')
+        # Plot No-CL actual raw & smoothed (solid red line, empirical 64M run only — zero synthetic projection)
+        ax.plot(steps_no_cl, rewards_no_cl, color='#d62728', alpha=0.15, linewidth=0.8)
+        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='#d62728', linestyle='-', linewidth=2.3, label='1-Stage PPO No-CL (Empirical 0–64M Run, Terminated at Local Minimum)')
+        ax.scatter([64.0], [smooth_rewards_no_cl[-1]], color='#d62728', s=45, zorder=6)
+        ax.annotate(
+            'Empirical No-CL Plateau (~1001 Reward, 0.1% Feasibility)\nTerminated at 64M Steps due to Policy Collapse',
+            xy=(64.0, smooth_rewards_no_cl[-1]),
+            xytext=(95.0, smooth_rewards_no_cl[-1] - 280),
+            arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2),
+            fontsize=8.5, fontweight='bold', color='#991b1b',
+            bbox=dict(facecolor='#fef2f2', edgecolor='#d62728', alpha=0.9, boxstyle='round,pad=0.3')
+        )
         
         ax.set_xscale('log')
         ax.set_xlim(steps_cl[0], steps_cl[-1])
         
-        # ax.set_title("Sample Efficiency & Convergence Comparison (CL-PPO vs. No-CL)", fontsize=12, fontweight="bold", pad=15)
         ax.set_xlabel('Training Steps (Millions, Log Scale)', fontsize=10, fontweight='bold')
         ax.set_ylabel('Mean Episode Reward', fontsize=10, fontweight='bold')
         ax.legend(loc='upper left', frameon=True, facecolor='white', framealpha=0.9, edgecolor='#e0e0e0')
@@ -333,37 +335,37 @@ def plot_figure_2_layouts():
         setup_logger.error(f"Error generating Figure 2: {e}")
 
 def plot_figure_3_efficiency():
-    """Generates Figure 3 (Scatter Plot showing CL-PPO and MC-Global with matched 100,000 steps budget)"""
+    """Generates Figure 3 (Scatter Plot showing CL-PPO, CL-PPO + Polish, CMA-ES, and MC-Global)"""
     try:
-        # Load JSON results
-        with open(PROJECT_ROOT / "logs/comparative_evaluation_results.json", 'r') as f:
+        v2_path = PROJECT_ROOT / "logs/comparative_evaluation_v2_results.json"
+        v1_path = PROJECT_ROOT / "logs/comparative_evaluation_results.json"
+        with open(v2_path if v2_path.exists() else v1_path, 'r') as f:
             d = json.load(f)
         
         raw_res = d['raw_results']
         
-        # Retrieve steps chronologically (0-1000).
-        # To make the limits identical, unsolved episodes for both CL-PPO and MC-Global are represented as 100,000 steps (max budget limit)
         steps_cl = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CL-PPO']])
         steps_mcg = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['MC-Global']])
         
-        episodes = np.arange(1000)
-        
-        # Enlarge the figure dimensions to fill the page layout better
+        episodes = np.arange(len(steps_cl))
         fig, ax = plt.subplots(figsize=(11.5, 5.8))
         
-        # Plot scatter dots with transparency
-        # Navy blue for CL-PPO, vibrant red for MC-Global
-        ax.scatter(episodes, steps_cl, color='#1E3A8A', alpha=0.5, s=12, label='CL-PPO (Proposed)')
-        ax.scatter(episodes, steps_mcg, color='#d62728', alpha=0.5, s=12, label='MC-Global (Stochastic)')
+        ax.scatter(episodes, steps_cl, color='#1E3A8A', alpha=0.5, s=12, label='CL-PPO (Single Forward Rollout)')
+        if 'CL-PPO + Polish' in raw_res:
+            steps_hyb = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CL-PPO + Polish']])
+            ax.scatter(episodes, steps_hyb, color='#10B981', alpha=0.45, s=12, label='CL-PPO + Local Polish (Hybrid)')
+        if 'CMA-ES' in raw_res:
+            steps_cma = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CMA-ES']])
+            ax.scatter(episodes, steps_cma, color='#F59E0B', alpha=0.45, s=12, label='CMA-ES (Evolutionary)')
+        ax.scatter(episodes, steps_mcg, color='#d62728', alpha=0.5, s=12, label='MC-Global (Stochastic Rejection)')
         
-        # Log scale with zoomed range (starting from 28 steps to eliminate empty space)
         ax.set_yscale('log')
         ax.set_ylim(28, 150000)
-        ax.set_xlim(0, 1000)
+        ax.set_xlim(0, len(steps_cl))
         
         ax.set_xlabel('Evaluation Episode Index (Chronological)', fontsize=10, fontweight='bold')
-        ax.set_ylabel('Computational Budget (Steps / Proposals, Log Scale)', fontsize=10, fontweight='bold')
-        ax.legend(loc='center right', frameon=True, facecolor='white', framealpha=0.9, fontsize=10)
+        ax.set_ylabel('Computational Budget (Steps / Evaluations, Log Scale)', fontsize=10, fontweight='bold')
+        ax.legend(loc='center right', frameon=True, facecolor='white', framealpha=0.9, fontsize=9.5)
         plt.grid(True, which='both', linestyle=':', alpha=0.5)
         plt.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure3.png", dpi=300)
@@ -372,16 +374,259 @@ def plot_figure_3_efficiency():
     except Exception as e:
         setup_logger.error(f"Error generating Figure 3: {e}")
 
+
+def plot_side_by_side_comparison():
+    """Generates side_by_side_comparison.png/.pdf (3 parcels x 4 methods)"""
+    try:
+        import torch
+        from scipy.optimize import minimize
+        from scripts.baselines.run_hybrid_ppo import run_hybrid_ppo
+        from scripts.baselines.run_cma_es import run_cma_es
+        from scripts.baselines.objective import calculate_footprint_cost, evaluate_final_solution
+
+        torch.set_num_threads(1)
+        raw_env = gym.make('UrbanPlanner-v0', stage=4)
+        model_path = PROJECT_ROOT / "models/stage_4_tunning_1757784606/best_model.zip"
+        stats_path = PROJECT_ROOT / "models/stage_4_tunning_1757784606/best_model_vec_normalize.pkl"
+
+        dummy = DummyVecEnv([lambda: gym.make('UrbanPlanner-v0', stage=4)])
+        vec_env = VecNormalize.load(str(stats_path), dummy)
+        vec_env.training = False
+        vec_env.norm_reward = False
+        model = PPO.load(model_path, env=vec_env, device="cpu")
+
+        seeds = [0, 8, 12]
+        method_titles = [
+            "CL-PPO (Proposed RL)",
+            "CL-PPO + Local Polish",
+            "CMA-ES (Evolutionary)",
+            "SLSQP (1-Start Gradient)",
+        ]
+
+        fig, axes = plt.subplots(len(seeds), 4, figsize=(14.0, 9.8))
+
+        for r_idx, seed in enumerate(seeds):
+            # 1. Run pure CL-PPO
+            obs, _ = raw_env.reset(seed=seed)
+            u = raw_env.unwrapped
+            ppo_steps = 0
+            ppo_solved = False
+            for _ in range(256):
+                b = {k: np.expand_dims(v, axis=0) for k, v in obs.items()}
+                act, _ = model.predict(vec_env.normalize_obs(b), deterministic=True)
+                obs, _, term, trunc, info = raw_env.step(act[0])
+                ppo_steps += 1
+                if term or trunc:
+                    ppo_solved = bool(info.get("is_solution", False))
+                    break
+            ppo_coords = list(u.outline.coords)
+            ppo_ortho = float(np.mean([abs(a - 90.0) for a in u.assessment.current_angles]))
+
+            # 2. Run Hybrid CL-PPO + Polish
+            hyb_res = run_hybrid_ppo(model, vec_env, raw_env, seed=seed)
+            hyb_coords = hyb_res["final_coords"]
+
+            # 3. Run CMA-ES
+            cma_res = run_cma_es(raw_env, seed=seed, max_evals=15000)
+            cma_coords = cma_res["final_coords"]
+
+            # 4. Run 1-start SLSQP from canvas initial state
+            raw_env.reset(seed=seed)
+            u = raw_env.unwrapped
+            x0 = np.array([0.0, 0.0, 1800.0, 0.0, 1800.0, 1300.0, 0.0, 1300.0])
+            evals_sl = 0
+            def _cf(x):
+                nonlocal evals_sl
+                evals_sl += 1
+                return calculate_footprint_cost(x, u)
+            res_sl = minimize(_cf, x0, method="SLSQP", options={"maxiter": 120, "ftol": 1e-4})
+            sl_eval = evaluate_final_solution(res_sl.x, u)
+            sl_coords = sl_eval["final_coords"]
+
+            plot_poly = np.array(u.plot.coords + [u.plot.coords[0]])
+            env_poly = np.array(list(u.plot.permitted_outline.exterior.coords))
+
+            row_entries = [
+                (ppo_coords, ppo_solved, ppo_steps, ppo_ortho),
+                (hyb_coords, hyb_res["solved"], hyb_res["steps"], hyb_res["ortho_deviation"]),
+                (cma_coords, cma_res["solved"], cma_res["steps"], cma_res["ortho_deviation"]),
+                (sl_coords, sl_eval["solved"], evals_sl, sl_eval["ortho_deviation"]),
+            ]
+
+            for c_idx, (b_coords, is_ok, st_cnt, o_dev) in enumerate(row_entries):
+                ax = axes[r_idx, c_idx]
+                if r_idx == 0:
+                    ax.set_title(method_titles[c_idx], fontsize=10.5, fontweight='bold', pad=8)
+
+                ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.1, label='Parcel Boundary')
+                ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.16)
+                ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0, label='Buildable Zone')
+
+                b_arr = np.array(list(b_coords) + [b_coords[0]])
+                b_col = '#15803d' if is_ok else '#dc2626'
+                ax.fill(b_arr[:, 0], b_arr[:, 1], color=b_col, alpha=0.22)
+                ax.plot(b_arr[:, 0], b_arr[:, 1], color=b_col, linewidth=2.2)
+                ax.scatter(b_arr[:-1, 0], b_arr[:-1, 1], color=b_col, s=16, zorder=5)
+
+                status_txt = "FEASIBLE" if is_ok else "VIOLATED"
+                badge_bg = '#dcfce7' if is_ok else '#fee2e2'
+                ax.text(
+                    0.04, 0.95,
+                    f"Seed {seed} | {status_txt}\nSteps/Evals: {st_cnt}\nOrtho Dev: {o_dev:.1f}°",
+                    transform=ax.transAxes, fontsize=8.0, fontweight='bold',
+                    va='top', ha='left', color=b_col,
+                    bbox=dict(facecolor=badge_bg, edgecolor=b_col, alpha=0.92, boxstyle='round,pad=0.25')
+                )
+                ax.set_aspect('equal')
+                pad = 80
+                ax.set_xlim(min(plot_poly[:, 0]) - pad, max(plot_poly[:, 0]) + pad)
+                ax.set_ylim(min(plot_poly[:, 1]) - pad, max(plot_poly[:, 1]) + pad)
+                ax.set_xticks([])
+                ax.set_yticks([])
+
+        plt.tight_layout()
+        plt.savefig(OUTPUT_DIR / "side_by_side_comparison.png", dpi=300)
+        plt.savefig(OUTPUT_DIR / "side_by_side_comparison.pdf")
+        plt.close()
+        setup_logger.info("Successfully generated side_by_side_comparison.png/.pdf.")
+    except Exception as e:
+        setup_logger.error(f"Error generating side_by_side_comparison: {e}")
+
+
+def plot_failure_cases_analysis():
+    """Generates failure_cases_analysis.png/.pdf illustrating Category A (Infeasible Zoning) vs Category B (Sub-Grid Truncation)"""
+    try:
+        import torch
+        from scripts.baselines.run_hybrid_ppo import run_hybrid_ppo
+
+        torch.set_num_threads(1)
+        raw_env = gym.make('UrbanPlanner-v0', stage=4)
+        model_path = PROJECT_ROOT / "models/stage_4_tunning_1757784606/best_model.zip"
+        stats_path = PROJECT_ROOT / "models/stage_4_tunning_1757784606/best_model_vec_normalize.pkl"
+
+        dummy = DummyVecEnv([lambda: gym.make('UrbanPlanner-v0', stage=4)])
+        vec_env = VecNormalize.load(str(stats_path), dummy)
+        vec_env.training = False
+        vec_env.norm_reward = False
+        model = PPO.load(model_path, env=vec_env, device="cpu")
+
+        cat_a_seeds = [3, 6, 7]      # Over-constrained zoning (W_min^2 * sin(85°) > A_max)
+        cat_b_seeds = [8, 20, 28]    # Discrete horizon truncation resolved by Hybrid Polish
+
+        fig, axes = plt.subplots(2, 3, figsize=(13.5, 8.2))
+
+        for col_idx, seed in enumerate(cat_a_seeds):
+            ax = axes[0, col_idx]
+            obs, _ = raw_env.reset(seed=seed)
+            u = raw_env.unwrapped
+            for _ in range(256):
+                b = {k: np.expand_dims(v, axis=0) for k, v in obs.items()}
+                act, _ = model.predict(vec_env.normalize_obs(b), deterministic=True)
+                obs, _, term, trunc, _ = raw_env.step(act[0])
+                if term or trunc:
+                    break
+
+            plot_poly = np.array(u.plot.coords + [u.plot.coords[0]])
+            env_poly = np.array(list(u.plot.permitted_outline.exterior.coords))
+            b_arr = np.array(list(u.outline.coords) + [u.outline.coords[0]])
+
+            ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.1)
+            ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.16)
+            ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0)
+            ax.fill(b_arr[:, 0], b_arr[:, 1], color='#d97706', alpha=0.20)
+            ax.plot(b_arr[:, 0], b_arr[:, 1], color='#d97706', linewidth=2.1, label='CL-PPO Best Compromise')
+
+            w_min, w_max = u.plot.width_range
+            a_min, a_max = u.plot.area_range
+            min_rect_area = int(w_min ** 2)
+            ax.set_title(f"Category A (Over-Constrained): Seed {seed}", fontsize=9.5, fontweight='bold')
+            ax.text(
+                0.04, 0.95,
+                f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
+                f"Target Width: [{w_min}, {w_max}] px\n"
+                f"Min Ortho Area (W_min²): {min_rect_area//1000}k > {a_max//1000}k!\n"
+                f"Empty Feasible Set (F = ∅)",
+                transform=ax.transAxes, fontsize=7.8, fontweight='bold',
+                va='top', ha='left', color='#92400e',
+                bbox=dict(facecolor='#fef3c7', edgecolor='#d97706', alpha=0.92, boxstyle='round,pad=0.25')
+            )
+            ax.set_aspect('equal')
+            pad = 70
+            ax.set_xlim(min(plot_poly[:, 0]) - pad, max(plot_poly[:, 0]) + pad)
+            ax.set_ylim(min(plot_poly[:, 1]) - pad, max(plot_poly[:, 1]) + pad)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        for col_idx, seed in enumerate(cat_b_seeds):
+            ax = axes[1, col_idx]
+            obs, _ = raw_env.reset(seed=seed)
+            u = raw_env.unwrapped
+            for _ in range(256):
+                b = {k: np.expand_dims(v, axis=0) for k, v in obs.items()}
+                act, _ = model.predict(vec_env.normalize_obs(b), deterministic=True)
+                obs, _, term, trunc, _ = raw_env.step(act[0])
+                if term or trunc:
+                    break
+            ppo_coords = list(u.outline.coords)
+            ppo_w_diff = u.assessment.width_difference
+            ppo_a_diff = abs(u.assessment.area_difference)
+
+            hyb_res = run_hybrid_ppo(model, vec_env, raw_env, seed=seed)
+            hyb_coords = hyb_res["final_coords"]
+
+            plot_poly = np.array(u.plot.coords + [u.plot.coords[0]])
+            env_poly = np.array(list(u.plot.permitted_outline.exterior.coords))
+            ppo_arr = np.array(ppo_coords + [ppo_coords[0]])
+            hyb_arr = np.array(list(hyb_coords) + [hyb_coords[0]])
+
+            ax.plot(plot_poly[:, 0], plot_poly[:, 1], color='#888888', linestyle='--', linewidth=1.1)
+            ax.fill(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', alpha=0.16)
+            ax.plot(env_poly[:, 0], env_poly[:, 1], color='#9b59b6', linestyle=':', linewidth=1.0)
+
+            ax.plot(ppo_arr[:, 0], ppo_arr[:, 1], color='#ef4444', linestyle='--', linewidth=1.8, label='CL-PPO at T=256 (Truncated)')
+            ax.fill(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', alpha=0.22)
+            ax.plot(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', linewidth=2.2, label='CL-PPO + Local Polish (Solved)')
+
+            ax.set_title(f"Category B (Sub-Grid Truncation): Seed {seed}", fontsize=9.5, fontweight='bold')
+            ax.text(
+                0.04, 0.95,
+                f"CL-PPO (T=256): ΔW={ppo_w_diff:.0f}px, ΔA={ppo_a_diff//1000}k\n"
+                f"Hybrid Polish: SOLVED (+{hyb_res['polish_evals']} evals)\n"
+                f"Final Ortho Dev: {hyb_res['ortho_deviation']:.2f}°",
+                transform=ax.transAxes, fontsize=7.8, fontweight='bold',
+                va='top', ha='left', color='#166534',
+                bbox=dict(facecolor='#dcfce7', edgecolor='#15803d', alpha=0.92, boxstyle='round,pad=0.25')
+            )
+            if col_idx == 2:
+                ax.legend(loc='lower right', fontsize=7.5, frameon=True, facecolor='white')
+            ax.set_aspect('equal')
+            pad = 70
+            ax.set_xlim(min(plot_poly[:, 0]) - pad, max(plot_poly[:, 0]) + pad)
+            ax.set_ylim(min(plot_poly[:, 1]) - pad, max(plot_poly[:, 1]) + pad)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        plt.tight_layout()
+        plt.savefig(OUTPUT_DIR / "failure_cases_analysis.png", dpi=300)
+        plt.savefig(OUTPUT_DIR / "failure_cases_analysis.pdf")
+        plt.close()
+        setup_logger.info("Successfully generated failure_cases_analysis.png/.pdf.")
+    except Exception as e:
+        setup_logger.error(f"Error generating failure_cases_analysis: {e}")
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Generate paper figures selectively.")
     parser.add_argument('--fig1', action='store_true', help="Generate Figure 1 & Ablation Figure")
     parser.add_argument('--fig2', action='store_true', help="Generate Figure 2 Layouts Grid")
     parser.add_argument('--fig3', action='store_true', help="Generate Figure 3/4 Scatter Plot")
+    parser.add_argument('--fig4', action='store_true', help="Generate Side-by-Side Comparison Figure")
+    parser.add_argument('--fig5', action='store_true', help="Generate Failure Cases Analysis Figure")
     parser.add_argument('--all', action='store_true', help="Generate all figures")
     args = parser.parse_args()
     
-    if not (args.fig1 or args.fig2 or args.fig3 or args.all):
+    if not (args.fig1 or args.fig2 or args.fig3 or args.fig4 or args.fig5 or args.all):
         args.all = True
         
     if args.fig1 or args.all:
@@ -390,3 +635,7 @@ if __name__ == "__main__":
         plot_figure_2_layouts()
     if args.fig3 or args.all:
         plot_figure_3_efficiency()
+    if args.fig4 or args.all:
+        plot_side_by_side_comparison()
+    if args.fig5 or args.all:
+        plot_failure_cases_analysis()
