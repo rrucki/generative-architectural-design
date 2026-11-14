@@ -169,16 +169,9 @@ def plot_figure_1_and_ablation():
         
         # Plot No-CL actual raw & smoothed (solid red line, empirical 64M run only — zero synthetic projection)
         ax.plot(steps_no_cl, rewards_no_cl, color='#d62728', alpha=0.15, linewidth=1.0)
-        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='#d62728', linestyle='-', linewidth=2.8, label='1-Stage PPO No-CL (Empirical 0–64M Run, Terminated at Local Minimum)')
+        ax.plot(steps_no_cl, smooth_rewards_no_cl, color='#d62728', linestyle='-', linewidth=2.8, label='1-Stage PPO No-CL (Empirical 0–64M Run, Stagnated)')
         ax.scatter([64.0], [smooth_rewards_no_cl[-1]], color='#d62728', s=70, zorder=6)
-        ax.annotate(
-            'Empirical No-CL Plateau (~1001 Reward, 0.1% Feasibility)\nTerminated at 64M Steps due to Policy Collapse',
-            xy=(64.0, smooth_rewards_no_cl[-1]),
-            xytext=(90.0, smooth_rewards_no_cl[-1] - 320),
-            arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.5),
-            fontsize=11.5, fontweight='bold', color='#991b1b',
-            bbox=dict(facecolor='#fef2f2', edgecolor='#d62728', alpha=0.92, boxstyle='round,pad=0.35')
-        )
+        ax.axvline(x=64.0, color='#d62728', linestyle=':', linewidth=1.3, alpha=0.7)
         
         ax.set_xscale('log')
         ax.set_xlim(steps_cl[0], steps_cl[-1])
@@ -220,8 +213,8 @@ def plot_figure_2_layouts():
         setup_logger.info(f"Using hardcoded feasible seeds: {seeds}")
             
         # Draw on a single large canvas to create a perfect continuous table grid
-        # Set landscape dimensions (14.0 x 10.8) and equal aspect ratio (4 columns x 3 rows) for full A4 landscape visibility
-        fig, ax = plt.subplots(figsize=(14.0, 10.8))
+        # Set landscape dimensions (15.5 x 10.5) and equal aspect ratio (4 columns x 3 rows) for full A4 landscape visibility
+        fig, ax = plt.subplots(figsize=(15.5, 10.5))
         
         # Grid dimensions:
         # 4 columns, each 100 units wide. Total width = 400.
@@ -288,7 +281,7 @@ def plot_figure_2_layouts():
             cx = (cell_x_min + cell_x_max) / 2
             cy = (cell_y_min + cell_y_max) / 2
             
-            scale = min(88 / dx, 88 / dy)
+            scale = min(92 / dx, 92 / dy)
             
             def map_coords(coords):
                 coords = np.array(coords)
@@ -311,11 +304,11 @@ def plot_figure_2_layouts():
             
             # Plot building footprint outline (bold dark slate)
             l3, = ax.plot(m_building[:, 0], m_building[:, 1], color='#2c3e50', linewidth=3.0)
-            ax.scatter(m_building[:-1, 0], m_building[:-1, 1], color='#2c3e50', zorder=5, s=32)
+            ax.scatter(m_building[:-1, 0], m_building[:-1, 1], color='#2c3e50', zorder=5, s=36)
             legend_handles['Generated Building Outline'] = l3
             
             # Draw simple text ID in the top-left corner of the cell
-            ax.text(100 * c + 8, 100 * (3 - r) - 8, f"{idx + 1}", fontsize=18.0, fontweight='bold', color='#2c3e50',
+            ax.text(100 * c + 8, 100 * (3 - r) - 8, f"{idx + 1}", fontsize=20.0, fontweight='bold', color='#2c3e50',
                     va='top', ha='left', zorder=15)
             
         # Hide standard spines and tick marks
@@ -327,10 +320,10 @@ def plot_figure_2_layouts():
         # Unified legend below the table
         legend_labels = ['Property Boundary', 'Permitted Buildable Zone', 'Generated Building Outline']
         legend_objs = [legend_handles[l] for l in legend_labels]
-        ax.legend(legend_objs, legend_labels, loc='lower center', ncol=3, frameon=True, edgecolor='#cccccc', facecolor='white', framealpha=0.95, fontsize=13.0, bbox_to_anchor=(0.5, 0.005))
+        ax.legend(legend_objs, legend_labels, loc='lower center', ncol=3, frameon=True, edgecolor='#cccccc', facecolor='white', framealpha=0.95, fontsize=13.5, bbox_to_anchor=(0.5, 0.005))
         
-        plt.subplots_adjust(top=0.99, bottom=0.04)
-        plt.savefig(OUTPUT_DIR / "figure2.png", dpi=300, bbox_inches='tight', pad_inches=0.02)
+        plt.subplots_adjust(top=0.995, bottom=0.035, left=0.005, right=0.995)
+        plt.savefig(OUTPUT_DIR / "figure2.png", dpi=300, bbox_inches='tight', pad_inches=0.01)
         plt.close()
         setup_logger.info("Successfully generated Figure 2 (Unified Table Grid).")
     except Exception as e:
@@ -350,24 +343,25 @@ def plot_figure_3_efficiency():
         steps_mcg = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['MC-Global']])
         
         episodes = np.arange(len(steps_cl))
-        fig, ax = plt.subplots(figsize=(11.5, 5.8))
+        fig, ax = plt.subplots(figsize=(14.5, 7.5))
         
-        ax.scatter(episodes, steps_cl, color='#1E3A8A', alpha=0.5, s=12, label='CL-PPO (Single Forward Rollout)')
+        ax.scatter(episodes, steps_cl, color='#1E3A8A', alpha=0.5, s=18, label='CL-PPO (Single Forward Rollout)')
         if 'CL-PPO + Polish' in raw_res:
             steps_hyb = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CL-PPO + Polish']])
-            ax.scatter(episodes, steps_hyb, color='#10B981', alpha=0.45, s=12, label='CL-PPO + Local Polish (Hybrid)')
+            ax.scatter(episodes, steps_hyb, color='#10B981', alpha=0.45, s=18, label='CL-PPO + Local Polish (Hybrid)')
         if 'CMA-ES' in raw_res:
             steps_cma = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CMA-ES']])
-            ax.scatter(episodes, steps_cma, color='#F59E0B', alpha=0.45, s=12, label='CMA-ES (Evolutionary)')
-        ax.scatter(episodes, steps_mcg, color='#d62728', alpha=0.5, s=12, label='MC-Global (Stochastic Rejection)')
+            ax.scatter(episodes, steps_cma, color='#F59E0B', alpha=0.45, s=18, label='CMA-ES (Evolutionary)')
+        ax.scatter(episodes, steps_mcg, color='#d62728', alpha=0.5, s=18, label='MC-Global (Stochastic Rejection)')
         
         ax.set_yscale('log')
         ax.set_ylim(28, 150000)
         ax.set_xlim(0, len(steps_cl))
         
-        ax.set_xlabel('Evaluation Episode Index (Chronological)', fontsize=10, fontweight='bold')
-        ax.set_ylabel('Computational Budget (Steps / Evaluations, Log Scale)', fontsize=10, fontweight='bold')
-        ax.legend(loc='center right', frameon=True, facecolor='white', framealpha=0.9, fontsize=9.5)
+        ax.set_xlabel('Evaluation Episode Index (Chronological)', fontsize=13.5, fontweight='bold')
+        ax.set_ylabel('Computational Budget (Steps / Evaluations, Log Scale)', fontsize=13.5, fontweight='bold')
+        ax.tick_params(axis='both', which='major', labelsize=11.5)
+        ax.legend(loc='center right', frameon=True, facecolor='white', framealpha=0.95, fontsize=12.0)
         plt.grid(True, which='both', linestyle=':', alpha=0.5)
         plt.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure3.png", dpi=300)
@@ -405,7 +399,7 @@ def plot_side_by_side_comparison():
             "SLSQP (1-Start Gradient)",
         ]
 
-        fig, axes = plt.subplots(len(seeds), 4, figsize=(16.5, 11.0))
+        fig, axes = plt.subplots(len(seeds), 4, figsize=(17.5, 10.5))
 
         for r_idx, seed in enumerate(seeds):
             # 1. Run pure CL-PPO
@@ -480,15 +474,15 @@ def plot_side_by_side_comparison():
                     bbox=dict(facecolor=badge_bg, edgecolor=b_col, alpha=0.95, boxstyle='round,pad=0.35')
                 )
                 ax.set_aspect('equal')
-                pad = 80
+                pad = 45
                 ax.set_xlim(min(plot_poly[:, 0]) - pad, max(plot_poly[:, 0]) + pad)
                 ax.set_ylim(min(plot_poly[:, 1]) - pad, max(plot_poly[:, 1]) + pad)
                 ax.set_xticks([])
                 ax.set_yticks([])
 
-        plt.tight_layout()
-        plt.savefig(OUTPUT_DIR / "side_by_side_comparison.png", dpi=300)
-        plt.savefig(OUTPUT_DIR / "side_by_side_comparison.pdf")
+        plt.subplots_adjust(left=0.01, right=0.99, top=0.96, bottom=0.02, wspace=0.03, hspace=0.10)
+        plt.savefig(OUTPUT_DIR / "side_by_side_comparison.png", dpi=300, bbox_inches='tight', pad_inches=0.02)
+        plt.savefig(OUTPUT_DIR / "side_by_side_comparison.pdf", bbox_inches='tight', pad_inches=0.02)
         plt.close()
         setup_logger.info("Successfully generated side_by_side_comparison.png/.pdf.")
     except Exception as e:
