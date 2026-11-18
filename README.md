@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: >= 3.12](https://img.shields.io/badge/Python->=%203.12-blue.svg)](https://www.python.org/)
-[![Gymnasium: v0.29](https://img.shields.io/badge/Gymnasium-v0.29-green.svg)](https://gymnasium.farama.org/)
-[![Stable--Baselines3: v2.2](https://img.shields.io/badge/Stable--Baselines3-v2.2-orange.svg)](https://stable-baselines3.readthedocs.io/)
+[![Gymnasium: v1.0.0](https://img.shields.io/badge/Gymnasium-v1.0.0-green.svg)](https://gymnasium.farama.org/)
+[![Stable--Baselines3: v2.4.1](https://img.shields.io/badge/Stable--Baselines3-v2.4.1-orange.svg)](https://stable-baselines3.readthedocs.io/)
 
 This repository contains the official codebase and replication package for the research paper: **"Shaping Building Footprints via Curriculum-Guided Reinforcement Learning"** (submitted to *Automation in Construction*; pinned release tag `v2.0-aic-submission`).
 

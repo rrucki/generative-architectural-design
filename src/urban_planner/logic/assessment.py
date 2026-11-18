@@ -45,7 +45,7 @@ class OutlineAssessment:
         self.nearest_boundary_points: List[Tuple[float, float]] = []
         self.area_difference: int = 0
         self.width_difference: float = 0.0
-        self.angle_differences: List[int] = []
+        self.angle_differences: List[float] = []
 
         self.current_width: float = 0.0
         self.current_angles: List[float] = []
@@ -95,12 +95,11 @@ class OutlineAssessment:
             self.width_difference = 0
 
     def _check_angles(self) -> None:
-        """Calculates the outline's angles and their differences from the target."""
+        """Calculates the outline's angles and their strict excess beyond tolerance."""
         self.current_angles = calculate_polygon_angles(
             self.current_outline_coords)
         self.angle_differences = [
-            int(max(0.0,
-                    abs(angle - TARGET_ANGLE_DEGREES) - ANGLE_TOLERANCE_DEGREES))
+            max(0.0, abs(angle - TARGET_ANGLE_DEGREES) - ANGLE_TOLERANCE_DEGREES)
             for angle in self.current_angles
         ]
 

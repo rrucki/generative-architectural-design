@@ -240,6 +240,7 @@ def plot_figure_2_layouts():
             model = PPO.load(model_path, env=eval_env)
             
             obs, info = eval_env.envs[0].reset(seed=seed)
+            obs = eval_env.normalize_obs(obs)
             terminated = False
             for step in range(256):
                 action, _states = model.predict(obs, deterministic=True)
@@ -275,7 +276,7 @@ def plot_figure_2_layouts():
             cx = (cell_x_min + cell_x_max) / 2
             cy = (cell_y_min + cell_y_max) / 2
             
-            scale = min(92 / dx, 92 / dy)
+            scale = min(84 / dx, 84 / dy)
             
             def map_coords(coords):
                 coords = np.array(coords)
@@ -301,9 +302,10 @@ def plot_figure_2_layouts():
             ax.scatter(m_building[:-1, 0], m_building[:-1, 1], color='#2c3e50', zorder=5, s=36)
             legend_handles['Generated Building Outline'] = l3
             
-            # Draw simple text ID in the top-left corner of the cell
-            ax.text(100 * c + 8, 100 * (3 - r) - 8, f"{idx + 1}", fontsize=20.0, fontweight='bold', color='#2c3e50',
-                    va='top', ha='left', zorder=15)
+            # Draw simple text ID in the top-left corner of the cell with white mask for legibility
+            ax.text(100 * c + 7, 100 * (3 - r) - 7, f"{idx + 1}", fontsize=20.0, fontweight='bold', color='#2c3e50',
+                    va='top', ha='left', zorder=15,
+                    bbox=dict(facecolor='white', edgecolor='none', alpha=0.88, pad=1.5))
             
         # Hide standard spines and tick marks
         for spine in ax.spines.values():

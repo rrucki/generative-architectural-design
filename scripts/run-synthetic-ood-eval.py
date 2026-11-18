@@ -10,7 +10,7 @@ under three zero-shot distribution shifts in procedural parcel generation parame
    interior buildable zones strictly outside the training setback support.
 2. Regime OOD-2 (Highly Non-Convex Irregular Boundaries): Increased radial edge
    perturbation (EDGE_MOVE_FACTOR_MIN=3.2, EDGE_MOVE_FACTOR_MAX=5.5,
-   CENTER_BUFFER_FACTOR=-1.9, offset in [45, 80] px).
+   offset in [45, 80] px).
 3. Regime OOD-3 (High-Density Target Coverage): Increased covered_area_ratio from
    [0.10, 0.20] to [0.18, 0.26] with tighter area tolerance [0.80 * max_area, max_area]
    (offset in [40, 75] px).
@@ -68,7 +68,6 @@ def generate_ood_plot(regime: str) -> Plot:
         orig_p = dict(GENERATION_PARAMS)
         GENERATION_PARAMS["EDGE_MOVE_FACTOR_MIN"] = 3.2
         GENERATION_PARAMS["EDGE_MOVE_FACTOR_MAX"] = 5.5
-        GENERATION_PARAMS["CENTER_BUFFER_FACTOR"] = -1.9
         try:
             offset = random.randint(45, 80)
             coords, permitted_outline = generate_random_outline(offset)
@@ -116,7 +115,6 @@ def apply_ood_plot_override(raw_env: Any, regime: str, seed: int) -> None:
         elif regime == "ood_irregular_nonconvex":
             GENERATION_PARAMS["EDGE_MOVE_FACTOR_MIN"] = 3.2
             GENERATION_PARAMS["EDGE_MOVE_FACTOR_MAX"] = 5.5
-            GENERATION_PARAMS["CENTER_BUFFER_FACTOR"] = -1.9
             offset = random.randint(45, 80)
             cov_min, cov_max = 0.10, 0.20
             area_low_ratio = 0.75

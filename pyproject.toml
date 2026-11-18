@@ -7,7 +7,7 @@ name = "urban-planner"
 version = "0.1.0"
 description = "A project for generative architectural design using reinforcement learning."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
