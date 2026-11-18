@@ -5,9 +5,9 @@
 [![Gymnasium: v0.29](https://img.shields.io/badge/Gymnasium-v0.29-green.svg)](https://gymnasium.farama.org/)
 [![Stable--Baselines3: v2.2](https://img.shields.io/badge/Stable--Baselines3-v2.2-orange.svg)](https://stable-baselines3.readthedocs.io/)
 
-This repository contains the official codebase and replication package for the research paper: **"Shaping Building Footprints via Curriculum-Guided Reinforcement Learning"** (submitted to *Automation in Construction*).
+This repository contains the official codebase and replication package for the research paper: **"Shaping Building Footprints via Curriculum-Guided Reinforcement Learning"** (submitted to *Automation in Construction*; pinned release tag `v2.0-aic-submission`).
 
-The project implements a custom Gymnasium environment (`UrbanPlanner-v0`), trains a Proximal Policy Optimization (PPO) agent using a 4-stage Potential-Based Reward Shaping (PBRS) curriculum, pairs the learned policy as an amortized neural warm-start with continuous local refinement (`CL-PPO + Refinement`, implemented via `run_hybrid_ppo.py`), and benchmarks it against classical nonlinear programming (`SLSQP`, `COBYLA`), evolutionary metaheuristics (`CMA-ES`, `Differential Evolution`), Monte Carlo baselines, and RL ablations.
+The project implements a custom Gymnasium environment (`UrbanPlanner-v0`), trains a Proximal Policy Optimization (PPO) agent using a 4-stage curriculum with PBRS-inspired undiscounted potential-difference reward shaping, pairs the learned policy as an amortized neural warm-start with continuous local refinement (`CL-PPO + Refinement`, implemented via `run_hybrid_ppo.py`), and benchmarks it against classical nonlinear programming (`SLSQP`, `COBYLA`), evolutionary metaheuristics (`CMA-ES`, `Differential Evolution`), Monte Carlo baselines, and RL ablations.
 
 Trained model weights and raw training/evaluation logs are archived on Zenodo at [https://doi.org/10.5281/zenodo.24336686](https://doi.org/10.5281/zenodo.24336686). Download and extract the weights into `models/` and logs into `logs/` before running evaluation or plotting scripts.
 
@@ -38,6 +38,7 @@ To resolve the severe gradient conflicts and boundary containment traps inherent
 │   ├── run-environment.py             # Random/manual environment exploration
 │   ├── view_logs.py                   # TensorBoard launcher helper
 │   ├── run-comparative-eval.py        # 1,000-parcel 9-method comparative benchmark
+│   ├── audit_polygon_containment.py   # Polygon.within & simplicity audit (1,000 test + OOD)
 │   ├── run-ablation-eval.py           # Full-checkpoint stage-removal ablations
 │   ├── run_fast_ablations.py          # Controlled 4-stage vs 2-stage PPO & CL-A2C suite
 │   ├── run-synthetic-ood-eval.py      # Zero-shot Synthetic OOD morphological shift suite
@@ -58,7 +59,7 @@ To resolve the severe gradient conflicts and boundary containment traps inherent
         ├── types.py                   # Stage & ObsKeys definitions
         ├── domain/geometries.py       # Outline & Plot geometric models
         ├── envs/                      # UrbanPlanner-v0 env & generation manager
-        ├── logic/                     # OutlineAssessment & PBRS RewardCalculator
+        ├── logic/                     # OutlineAssessment & potential-difference RewardCalculator
         ├── models/                    # Custom neural policy extractors
         ├── presentation/              # Pygame renderer
         ├── utils/                     # Parcel generator, geometry helpers & SB3 callbacks
@@ -160,6 +161,9 @@ python scripts/run-comparative-eval.py --n-episodes 10
 
 # Full 1,000-parcel benchmark -> logs/comparative_evaluation_v2_results.json
 python scripts/run-comparative-eval.py --n-episodes 1000
+
+# Independent full Polygon.within & simplicity audit (1,000 test + 180 OOD parcels)
+python scripts/audit_polygon_containment.py --n-parcels 1000 --audit-ood
 ```
 
 ### 2. Curriculum & Algorithmic Ablations

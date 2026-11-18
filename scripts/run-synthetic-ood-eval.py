@@ -6,11 +6,14 @@ Out-of-Distribution (OOD) Synthetic Parcel Generalization Benchmark.
 Evaluates the frozen CL-PPO policy and CL-PPO + Local Polish against CMA-ES and SLSQP
 under three zero-shot distribution shifts in procedural parcel generation parameters:
 1. Regime OOD-1 (Tight Setback Envelopes): Setback offset increased from [40, 80] px
-   to [85, 120] px, producing constricted interior buildable zones.
+   to [85, 115] px (with covered_area_ratio in [0.10, 0.18]), producing constricted
+   interior buildable zones strictly outside the training setback support.
 2. Regime OOD-2 (Highly Non-Convex Irregular Boundaries): Increased radial edge
-   perturbation (EDGE_MOVE_FACTOR_MAX=5.5, CENTER_BUFFER_FACTOR=-1.8).
+   perturbation (EDGE_MOVE_FACTOR_MIN=3.2, EDGE_MOVE_FACTOR_MAX=5.5,
+   CENTER_BUFFER_FACTOR=-1.9, offset in [45, 80] px).
 3. Regime OOD-3 (High-Density Target Coverage): Increased covered_area_ratio from
-   [0.10, 0.20] to [0.18, 0.26] with tighter area tolerance [0.82 * max_area, max_area].
+   [0.10, 0.20] to [0.18, 0.26] with tighter area tolerance [0.80 * max_area, max_area]
+   (offset in [40, 75] px).
 """
 
 import argparse
@@ -53,6 +56,50 @@ from scripts.baselines.run_hybrid_ppo import run_hybrid_ppo
 from scripts.baselines.run_cma_es import run_cma_es
 from scripts.baselines.run_constrained_opt import run_slsqp
 from scripts.baselines.objective import _segments_intersect
+
+
+def generate_ood_plot(regime: str) -> Plot:
+    """Builds an OOD Plot according to the specified synthetic distribution-shift regime."""
+    if regime == "ood_tight_setbacks":
+        offset = random.randint(85, 115)
+        cov_min, cov_max, low_r = 0.10, 0.18, 0.75
+        coords, permitted_outline = generate_random_outline(offset)
+    elif regime == "ood_irregular_nonconvex":
+        orig_p = dict(GENERATION_PARAMS)
+        GENERATION_PARAMS["EDGE_MOVE_FACTOR_MIN"] = 3.2
+        GENERATION_PARAMS["EDGE_MOVE_FACTOR_MAX"] = 5.5
+        GENERATION_PARAMS["CENTER_BUFFER_FACTOR"] = -1.9
+        try:
+            offset = random.randint(45, 80)
+            coords, permitted_outline = generate_random_outline(offset)
+        finally:
+            GENERATION_PARAMS.update(orig_p)
+        cov_min, cov_max, low_r = 0.10, 0.20, 0.75
+    elif regime == "ood_high_coverage":
+        offset = random.randint(40, 75)
+        cov_min, cov_max, low_r = 0.18, 0.26, 0.80
+        coords, permitted_outline = generate_random_outline(offset)
+    else:
+        raise ValueError(f"Unknown OOD regime: {regime}")
+
+    polygon = Polygon(coords)
+    max_area = polygon.area * random.uniform(cov_min, cov_max)
+    area_range = (int(max_area * low_r), int(max_area))
+    min_x, min_y, max_x, max_y = permitted_outline.bounds
+    max_w = min(max_x - min_x, max_y - min_y)
+    lw = max(MIN_TARGET_WIDTH, int(max_w * TARGET_WIDTH_MIN_FACTOR))
+    uw = int(max_w * TARGET_WIDTH_MAX_FACTOR)
+    if lw >= uw:
+        width_range = (lw, lw + 50)
+    else:
+        v1, v2 = random.randint(lw, uw), random.randint(lw, uw)
+        width_range = (min(v1, v2), max(v1, v2))
+    return Plot(
+        coords=coords,
+        permitted_outline=permitted_outline,
+        area_range=area_range,
+        width_range=width_range,
+    )
 
 
 def apply_ood_plot_override(raw_env: Any, regime: str, seed: int) -> None:
@@ -176,42 +223,7 @@ def main():
     for reg_key, reg_label in regimes:
         print(f"\n=== Evaluating {reg_label} ({args.n_per_regime} parcels) ===")
         # Monkeypatch Plot.from_random_generation so all baseline calls inside reset(seed=s) use the OOD generator
-        def make_ood_plot(cls_ref=Plot, rk=reg_key):
-            if rk == "ood_tight_setbacks":
-                offset = random.randint(85, 115)
-                cov_min, cov_max, low_r = 0.10, 0.18, 0.75
-                coords, permitted_outline = generate_random_outline(offset)
-            elif rk == "ood_irregular_nonconvex":
-                orig_p = dict(GENERATION_PARAMS)
-                GENERATION_PARAMS["EDGE_MOVE_FACTOR_MIN"] = 3.2
-                GENERATION_PARAMS["EDGE_MOVE_FACTOR_MAX"] = 5.5
-                GENERATION_PARAMS["CENTER_BUFFER_FACTOR"] = -1.9
-                try:
-                    offset = random.randint(45, 80)
-                    coords, permitted_outline = generate_random_outline(offset)
-                finally:
-                    GENERATION_PARAMS.update(orig_p)
-                cov_min, cov_max, low_r = 0.10, 0.20, 0.75
-            else:
-                offset = random.randint(40, 75)
-                cov_min, cov_max, low_r = 0.18, 0.26, 0.80
-                coords, permitted_outline = generate_random_outline(offset)
-
-            polygon = Polygon(coords)
-            max_area = polygon.area * random.uniform(cov_min, cov_max)
-            area_range = (int(max_area * low_r), int(max_area))
-            min_x, min_y, max_x, max_y = permitted_outline.bounds
-            max_w = min(max_x - min_x, max_y - min_y)
-            lw = max(MIN_TARGET_WIDTH, int(max_w * TARGET_WIDTH_MIN_FACTOR))
-            uw = int(max_w * TARGET_WIDTH_MAX_FACTOR)
-            if lw >= uw:
-                width_range = (lw, lw + 50)
-            else:
-                v1, v2 = random.randint(lw, uw), random.randint(lw, uw)
-                width_range = (min(v1, v2), max(v1, v2))
-            return Plot(coords=coords, permitted_outline=permitted_outline, area_range=area_range, width_range=width_range)
-
-        Plot.from_random_generation = classmethod(lambda cls: make_ood_plot())
+        Plot.from_random_generation = classmethod(lambda cls, rk=reg_key: generate_ood_plot(rk))
 
         reg_res = {"CL-PPO": [], "CL-PPO + Polish": [], "SLSQP": [], "CMA-ES": []}
         solvable_count = 0
