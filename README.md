@@ -20,7 +20,7 @@ To resolve the severe gradient conflicts and boundary containment traps inherent
 1. **Stage 1 — Placement (Containment):** All building footprint vertices must lie within the buildable setback envelope (`permitted_outline`).
 2. **Stage 2 — Area:** Footprint area must satisfy the parcel coverage bounds (`area_range`).
 3. **Stage 3 — Width (Tract Width):** Minimum functional tract width must satisfy `width_range`.
-4. **Stage 4 — Angle (Orthogonality):** Interior corner angles must lie within $90^\circ \pm 5^\circ$ (which guarantees strict quadrilateral convexity and simplicity).
+4. **Stage 4 — Angle (Orthogonality):** Interior corner angles must lie within $90^\circ \pm 5^\circ$ (signed interior orthogonality guarantees quadrilateral convexity and simplicity; under unsigned `arccos` angle checks, `OutlineAssessment` pairs this with an explicit non-self-intersection test).
 
 ---
 
