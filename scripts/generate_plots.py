@@ -134,12 +134,6 @@ def plot_figure_1_and_ablation():
         ax1.text(1.5, 3850, 'Stage 2\n(Area)', fontsize=8, ha='center', fontweight='bold', bbox=dict(facecolor='white', alpha=0.85, boxstyle='round,pad=0.3'))
         ax1.text(2.5, 3850, 'Stage 3\n(Tract Width)', fontsize=8, ha='center', fontweight='bold', bbox=dict(facecolor='white', alpha=0.85, boxstyle='round,pad=0.3'))
         ax1.text(3.5, 3850, 'Stage 4\n(Orthogonality)', fontsize=8, ha='center', fontweight='bold', bbox=dict(facecolor='white', alpha=0.85, boxstyle='round,pad=0.3'))
-
-        # Mark 90% asymptotic convergence threshold inside Stage 3 & Stage 4 vs extended stability plateau
-        ax1.axvline(x=3.011, color='#2ca02c', linestyle=':', linewidth=1.6, alpha=0.9)
-        ax1.text(3.52, 2350, '90% Asymptotic Plateau Reached\n(~169M Cumulative Active Steps)\nRemaining Budget: Stability Verification',
-                 fontsize=9.5, ha='center', color='#1b5e20', fontweight='bold',
-                 bbox=dict(facecolor='#e8f5e9', edgecolor='#2ca02c', alpha=0.9, boxstyle='round,pad=0.35'))
         
         fig.tight_layout()
         plt.savefig(OUTPUT_DIR / "figure1.png", dpi=300)
@@ -348,7 +342,7 @@ def plot_figure_3_efficiency():
         ax.scatter(episodes, steps_cl, color='#1E3A8A', alpha=0.5, s=18, label='CL-PPO (Single Forward Rollout)')
         if 'CL-PPO + Polish' in raw_res:
             steps_hyb = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CL-PPO + Polish']])
-            ax.scatter(episodes, steps_hyb, color='#10B981', alpha=0.45, s=18, label='CL-PPO + Local Polish (Hybrid)')
+            ax.scatter(episodes, steps_hyb, color='#10B981', alpha=0.45, s=18, label='CL-PPO + Refinement (Hybrid)')
         if 'CMA-ES' in raw_res:
             steps_cma = np.array([ep['steps'] if ep['solved'] else 100000 for ep in raw_res['CMA-ES']])
             ax.scatter(episodes, steps_cma, color='#F59E0B', alpha=0.45, s=18, label='CMA-ES (Evolutionary)')
@@ -394,7 +388,7 @@ def plot_side_by_side_comparison():
         seeds = [0, 8, 12]
         method_titles = [
             "CL-PPO (Proposed RL)",
-            "CL-PPO + Local Polish",
+            "CL-PPO + Refinement",
             "CMA-ES (Evolutionary)",
             "SLSQP (1-Start Gradient)",
         ]
@@ -592,13 +586,13 @@ def plot_failure_cases_analysis():
 
             ax.plot(ppo_arr[:, 0], ppo_arr[:, 1], color='#ef4444', linestyle='--', linewidth=2.4, label='CL-PPO at T=256 (Truncated)')
             ax.fill(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', alpha=0.22)
-            ax.plot(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', linewidth=3.0, label='CL-PPO + Local Polish (Solved)')
+            ax.plot(hyb_arr[:, 0], hyb_arr[:, 1], color='#15803d', linewidth=3.0, label='CL-PPO + Refinement (Solved)')
 
             ax.set_title(f"Category B (Sub-Grid Truncation): Seed {seed}", fontsize=14.0, fontweight='bold')
             ax.text(
                 0.04, 0.95,
                 f"CL-PPO (T=256): ΔW={ppo_w_diff:.0f}px, ΔA={ppo_a_diff//1000}k\n"
-                f"Hybrid Polish: SOLVED (+{hyb_res['polish_evals']} evals)\n"
+                f"Refinement: SOLVED (+{hyb_res['polish_evals']} evals)\n"
                 f"Final Ortho Dev: {hyb_res['ortho_deviation']:.2f}°",
                 transform=ax.transAxes, fontsize=11.0, fontweight='bold',
                 va='top', ha='left', color='#166534',

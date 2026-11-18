@@ -7,7 +7,7 @@
 
 This repository contains the official codebase and replication package for the research paper: **"Shaping Building Footprints via Curriculum-Guided Reinforcement Learning"** (submitted to *Automation in Construction*).
 
-The project implements a custom Gymnasium environment (`UrbanPlanner-v0`), trains a Proximal Policy Optimization (PPO) agent using a 4-stage Potential-Based Reward Shaping (PBRS) curriculum, pairs the learned policy as an amortized neural warm-start with continuous local refinement (`CL-PPO + Polish`), and benchmarks it against classical nonlinear programming (`SLSQP`, `COBYLA`), evolutionary metaheuristics (`CMA-ES`, `Differential Evolution`), Monte Carlo baselines, and RL ablations.
+The project implements a custom Gymnasium environment (`UrbanPlanner-v0`), trains a Proximal Policy Optimization (PPO) agent using a 4-stage Potential-Based Reward Shaping (PBRS) curriculum, pairs the learned policy as an amortized neural warm-start with continuous local refinement (`CL-PPO + Refinement`, implemented via `run_hybrid_ppo.py`), and benchmarks it against classical nonlinear programming (`SLSQP`, `COBYLA`), evolutionary metaheuristics (`CMA-ES`, `Differential Evolution`), Monte Carlo baselines, and RL ablations.
 
 Trained model weights and raw training/evaluation logs are archived on Zenodo at [https://doi.org/10.5281/zenodo.21206902](https://doi.org/10.5281/zenodo.21206902). Download and extract the weights into `models/` and logs into `logs/` before running evaluation or plotting scripts.
 
@@ -100,9 +100,10 @@ python scripts/run-environment.py --mode manual --episodes 1
 ```
 
 ### 2. Train or Inspect a Curriculum Agent
-Train a curriculum stage (resuming from the preceding stage checkpoint) or inspect TensorBoard logs:
+Train a single curriculum stage (example using a 64M-step budget; in the manuscript, empirical 90% reward convergence occurs at 168.8M cumulative steps across Stages 1–4, while extended 1.024B-step runs in Stages 3–4 [2.18B cumulative steps] serve as long-horizon stability tests) or inspect TensorBoard logs:
 
 ```bash
+# Example single-stage run (64M steps); see Supplementary Material Table S3 for all stage schedules
 python scripts/train-model.py --stage 4 --total-timesteps 64000000 --n-envs 8
 python scripts/view_logs.py
 ```
@@ -119,7 +120,7 @@ python scripts/run-model.py --model-path "models/stage_4_tunning_1757784606/best
 
 ## 📊 Paper Figure & Data Replication
 
-All scripts automatically resolve paths relative to the repository root and read/write intermediate JSON summaries in `logs/`.
+All scripts automatically resolve paths relative to the repository root, use deterministic parcel generation seeds (`0–999` for the 1,000-parcel main benchmark, `2000–2059` per regime for Synthetic OOD shifts), and read/write intermediate JSON summaries in `logs/`. To reproduce exact pinned dependencies, install from `requirements.txt` or `pyproject.toml` under Python 3.12+.
 
 ### 1. Cross-Paradigm Comparative Benchmark (1,000 Parcels)
 Evaluates `CL-PPO`, `CL-PPO + Polish`, `PPO (No-CL)`, `CMA-ES`, `SLSQP` (5-start), `COBYLA` (10-start), `Diff-Evolution`, `MC-Local`, and `MC-Global`:
