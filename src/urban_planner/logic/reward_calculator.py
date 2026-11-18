@@ -10,10 +10,10 @@ class RewardCalculator:
     """
     A stateful class responsible for calculating rewards based on environment state.
     This class implements a reward-shaping strategy for curriculum learning.
-    It calculates rewards for all goals (placement, area, etc.) in every step,
-    but weighs them based on the current training stage. Goals for the current
-    and past stages receive full weight, while future goals receive a smaller,
-    non-zero weight to provide a "hint" to the agent.
+    It evaluates rewards for all goals (placement, area, width, angle) at every
+    step and weights them by the current curriculum stage: active and previously
+    unlocked stages receive full weight (1.0), whereas future stages are scaled
+    by LOW_PRIORITY_REWARD_FACTOR (0.0 in config.py) to prevent gradient conflicts.
     """
 
     def __init__(self, stage: int):
@@ -67,6 +67,9 @@ class RewardCalculator:
         if terminated and is_stage_solution:
             total_reward += SOLUTION_BONUS * self.stage
 
+        # Update step-level milestone state unconditionally at every step
+        # (outside the terminal completion bonus branch) so symmetric boundary
+        # bonuses/deductions apply continuously across the trajectory.
         self.last_checklist = assessment.checklist.copy()
         self.last_vertices_in_place = [
             dist == 0 for dist in assessment.outside_shape_distances

@@ -49,6 +49,7 @@ class OutlineAssessment:
 
         self.current_width: float = 0.0
         self.current_angles: List[float] = []
+        self.is_simple: bool = True
 
         self.checklist: Dict[Stage, bool] = {stage: False for stage in Stage}
 
@@ -73,6 +74,7 @@ class OutlineAssessment:
         self._check_area_difference()
         self._check_width()
         self._check_angles()
+        self._check_self_intersection()
         self._update_checklist()
 
     def _check_width(self) -> None:
@@ -121,11 +123,29 @@ class OutlineAssessment:
         else:
             self.area_difference = 0
 
+    def _check_self_intersection(self) -> None:
+        """Checks whether non-adjacent quadrilateral edges intersect (bowtie topology)."""
+        if len(self.current_outline_coords) < 4:
+            self.is_simple = False
+            return
+
+        p0, p1, p2, p3 = self.current_outline_coords[:4]
+
+        def ccw(a: Tuple[int, int], b: Tuple[int, int], c: Tuple[int, int]) -> bool:
+            return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+
+        def intersect(a: Tuple[int, int], b: Tuple[int, int],
+                      c: Tuple[int, int], d: Tuple[int, int]) -> bool:
+            return ccw(a, c, d) != ccw(b, c, d) and ccw(a, b, c) != ccw(a, b, d)
+
+        self.is_simple = not (intersect(p0, p1, p2, p3) or intersect(p1, p2, p3, p0))
+
     def _update_checklist(self) -> None:
         """Updates the completion checklist based on the current state."""
         self.checklist[Stage.PLACEMENT] = all(
             dist == 0 for dist in self.outside_shape_distances)
         self.checklist[Stage.AREA] = self.area_difference == 0
         self.checklist[Stage.WIDTH] = self.width_difference == 0
-        self.checklist[Stage.ANGLE] = all(
-            diff == 0 for diff in self.angle_differences)
+        self.checklist[Stage.ANGLE] = (
+            all(diff == 0 for diff in self.angle_differences) and self.is_simple
+        )

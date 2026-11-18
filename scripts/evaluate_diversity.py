@@ -52,9 +52,32 @@ def principal_orientation_deg(coords: List[Tuple[int, int]]) -> float:
     return best_ang
 
 
+def greedy_iou_cluster_count(polys: List[Polygon], threshold: float) -> int:
+    """Counts spatially distinct geometric clusters via greedy representative filtering.
+
+    Iterates through unique valid polygons in rollout generation order and adds
+    polygon P to the representative set C iff 1 - IoU(P, Q) > threshold for all
+    previously selected representatives Q in C (with IoU computed in parcel coordinates).
+    """
+    representatives: List[Polygon] = []
+    for poly in polys:
+        is_novel = True
+        for rep in representatives:
+            inter = poly.intersection(rep).area
+            union = poly.union(rep).area
+            iou = (inter / union) if union > 0 else 1.0
+            if (1.0 - iou) <= threshold:
+                is_novel = False
+                break
+        if is_novel:
+            representatives.append(poly)
+    return len(representatives)
+
+
 def evaluate_stochastic_diversity(
     n_parcels: int = 50,
     k_rollouts: int = 20,
+    save: bool = True,
 ) -> Dict[str, Any]:
     torch.set_num_threads(1)
     raw_env = gym.make("UrbanPlanner-v0", stage=4)
@@ -77,6 +100,9 @@ def evaluate_stochastic_diversity(
     feasible_seeds = [idx for idx, r in enumerate(v2) if r["solved"]][:n_parcels]
 
     unique_counts = []
+    clusters_05 = []
+    clusters_10 = []
+    clusters_20 = []
     solved_rates_per_parcel = []
     pairwise_centroid_shifts = []
     pairwise_iou_dissimilarity = []
@@ -113,11 +139,20 @@ def evaluate_stochastic_diversity(
                     break
 
         solved_rates_per_parcel.append((len(valid_coords_list) / k_rollouts) * 100.0)
-        unique_set = list(set(valid_coords_list))
+        seen_coords = set()
+        unique_set = []
+        for c in valid_coords_list:
+            if c not in seen_coords:
+                seen_coords.add(c)
+                unique_set.append(c)
         unique_counts.append(len(unique_set))
+        unique_polys = [Polygon(c) for c in unique_set]
+        clusters_05.append(greedy_iou_cluster_count(unique_polys, 0.05))
+        clusters_10.append(greedy_iou_cluster_count(unique_polys, 0.10))
+        clusters_20.append(greedy_iou_cluster_count(unique_polys, 0.20))
 
         if len(unique_set) >= 2:
-            polys = [Polygon(c) for c in unique_set]
+            polys = unique_polys
             centroids = [(np.mean([pt[0] for pt in c]), np.mean([pt[1] for pt in c])) for c in unique_set]
             areas = [p.area for p in polys]
             aspects = []
@@ -149,21 +184,32 @@ def evaluate_stochastic_diversity(
         "mean_stochastic_feasibility_pct": float(np.mean(solved_rates_per_parcel)),
         "mean_unique_valid_layouts_per_parcel": float(np.mean(unique_counts)),
         "std_unique_valid_layouts_per_parcel": float(np.std(unique_counts)),
+        "mean_clusters_iou_05": float(np.mean(clusters_05)),
+        "std_clusters_iou_05": float(np.std(clusters_05)),
+        "mean_clusters_iou_10": float(np.mean(clusters_10)),
+        "std_clusters_iou_10": float(np.std(clusters_10)),
+        "mean_clusters_iou_20": float(np.mean(clusters_20)),
+        "std_clusters_iou_20": float(np.std(clusters_20)),
         "multi_solution_parcel_rate_pct": float(sum(1 for u in unique_counts if u >= 2) / n_parcels * 100.0),
-        "mean_pairwise_centroid_shift_px": float(np.mean(pairwise_centroid_shifts)),
-        "mean_pairwise_spatial_dissimilarity_1_minus_iou": float(np.mean(pairwise_iou_dissimilarity)),
-        "mean_aspect_ratio_spread": float(np.mean(aspect_ratio_ranges)),
-        "mean_area_variation_pct": float(np.mean(area_ranges_pct)),
+        "multi_solution_all_thresholds_rate_pct": float(sum(1 for c in clusters_20 if c >= 2) / n_parcels * 100.0),
+        "mean_pairwise_centroid_shift_px": float(np.mean(pairwise_centroid_shifts)) if pairwise_centroid_shifts else 0.0,
+        "mean_pairwise_spatial_dissimilarity_1_minus_iou": float(np.mean(pairwise_iou_dissimilarity)) if pairwise_iou_dissimilarity else 0.0,
+        "mean_aspect_ratio_spread": float(np.mean(aspect_ratio_ranges)) if aspect_ratio_ranges else 0.0,
+        "mean_area_variation_pct": float(np.mean(area_ranges_pct)) if area_ranges_pct else 0.0,
     }
 
     out_path = PROJECT_ROOT / "logs" / "diversity_evaluation_results.json"
-    with open(out_path, "w") as f:
-        json.dump(summary, f, indent=4)
+    if save:
+        with open(out_path, "w") as f:
+            json.dump(summary, f, indent=4)
 
     print("\n=== Stochastic Generative Diversity Summary ===")
     for k, v in summary.items():
         print(f"  {k}: {v:.3f}" if isinstance(v, float) else f"  {k}: {v}")
-    print(f"Saved diversity evaluation results to {out_path}")
+    if save:
+        print(f"Saved diversity evaluation results to {out_path}")
+    else:
+        print("Dry-run mode enabled; skipped writing diversity_evaluation_results.json")
     return summary
 
 
@@ -171,6 +217,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-parcels", type=int, default=50)
     parser.add_argument("--k-rollouts", type=int, default=20)
+    parser.add_argument("--dry-run", action="store_true", help="Do not overwrite JSON log file")
     args = parser.parse_args()
-    evaluate_stochastic_diversity(n_parcels=args.n_parcels, k_rollouts=args.k_rollouts)
+    evaluate_stochastic_diversity(
+        n_parcels=args.n_parcels,
+        k_rollouts=args.k_rollouts,
+        save=not args.dry_run,
+    )
 

@@ -529,8 +529,8 @@ def plot_failure_cases_analysis():
             w_min, w_max = u.plot.width_range
             a_min, a_max = u.plot.area_range
             min_rect_area = int(w_min ** 2)
-            ax.set_title(f"Category A (Over-Constrained): Seed {seed}", fontsize=14.0, fontweight='bold')
             if min_rect_area * np.sin(np.radians(85)) > a_max:
+                ax.set_title(f"Category A (Analytically Infeasible): Seed {seed}", fontsize=14.0, fontweight='bold')
                 conflict_text = (
                     f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
                     f"Target Width: [{w_min}, {w_max}] px\n"
@@ -538,11 +538,12 @@ def plot_failure_cases_analysis():
                     f"Empty Feasible Set (F = ∅)"
                 )
             else:
+                ax.set_title(f"Category A (Unresolved Bottleneck): Seed {seed}", fontsize=14.0, fontweight='bold')
                 conflict_text = (
                     f"Target Area: [{a_min//1000}k, {a_max//1000}k] px²\n"
                     f"Target Width: [{w_min}, {w_max}] px\n"
                     f"Setback Bottleneck < W_min ({w_min} px)\n"
-                    f"Empty Feasible Set (F = ∅)"
+                    f"No Feasible Solution Found (≤10⁵ evals)"
                 )
             ax.text(
                 0.04, 0.95,

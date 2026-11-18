@@ -9,7 +9,7 @@ This repository contains the official codebase and replication package for the r
 
 The project implements a custom Gymnasium environment (`UrbanPlanner-v0`), trains a Proximal Policy Optimization (PPO) agent using a 4-stage Potential-Based Reward Shaping (PBRS) curriculum, pairs the learned policy as an amortized neural warm-start with continuous local refinement (`CL-PPO + Refinement`, implemented via `run_hybrid_ppo.py`), and benchmarks it against classical nonlinear programming (`SLSQP`, `COBYLA`), evolutionary metaheuristics (`CMA-ES`, `Differential Evolution`), Monte Carlo baselines, and RL ablations.
 
-Trained model weights and raw training/evaluation logs are archived on Zenodo at [https://doi.org/10.5281/zenodo.21206902](https://doi.org/10.5281/zenodo.21206902). Download and extract the weights into `models/` and logs into `logs/` before running evaluation or plotting scripts.
+Trained model weights and raw training/evaluation logs are archived on Zenodo at [https://doi.org/10.5281/zenodo.24336686](https://doi.org/10.5281/zenodo.24336686). Download and extract the weights into `models/` and logs into `logs/` before running evaluation or plotting scripts.
 
 ---
 
@@ -100,11 +100,40 @@ python scripts/run-environment.py --mode manual --episodes 1
 ```
 
 ### 2. Train or Inspect a Curriculum Agent
-Train a single curriculum stage (example using a 64M-step budget; in the manuscript, empirical 90% reward convergence occurs at 168.8M cumulative steps across Stages 1–4, while extended 1.024B-step runs in Stages 3–4 [2.18B cumulative steps] serve as long-horizon stability tests) or inspect TensorBoard logs:
+Train the sequential 4-stage curriculum or the single-stage `PPO (No-CL)` baseline, or inspect TensorBoard logs. Note on rollout buffer semantics: `scripts/train-model.py` divides `--n-steps` by `--n-envs` before passing it to Stable-Baselines3 `PPO(..., n_steps=args.n_steps // n_envs)`. Thus, `--n-steps 8192 --n-envs 8` produces **1,024 steps per environment** and a total rollout buffer of **8,192 environment steps per PPO update** (16 minibatches of size 512 for 2 epochs). In the manuscript, empirical 90% reward convergence across Stages 1–4 occurs at 168.8M cumulative active steps, while extended 1.024B-step runs in Stages 3–4 serve as long-horizon stability tests:
 
 ```bash
-# Example single-stage run (64M steps); see Supplementary Material Table S3 for all stage schedules
-python scripts/train-model.py --stage 4 --total-timesteps 64000000 --n-envs 8
+# Stage 1 — Containment (64M steps)
+python scripts/train-model.py --run-name stage_1 --stage 1 --total-timesteps 64000000 \
+  --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
+  --lr-schedule-type linear --lr-start 0.001 --lr-end 0.0005 \
+  --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.025
+
+# Stage 2 — Area (64M steps, warm-started from Stage 1 best checkpoint)
+python scripts/train-model.py --run-name stage_2 --stage 2 --resume-from-model "stage_1_<ts>/best_model.zip" \
+  --total-timesteps 64000000 --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
+  --lr-schedule-type linear --lr-start 0.003 --lr-end 0.0008 \
+  --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.025
+
+# Stage 3 — Tract Width (1.024B stability horizon, warm-started from Stage 2)
+python scripts/train-model.py --run-name stage_3 --stage 3 --resume-from-model "stage_2_<ts>/final_model.zip" \
+  --total-timesteps 1024000000 --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
+  --lr-schedule-type constant --lr-start 0.0026 \
+  --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.015
+
+# Stage 4 — Orthogonality (1.024B stability horizon; initial Stage 4 warm-start at lr=0.0026, ent=0.015,
+# followed by final Stage 4 tuning run reported in the paper)
+python scripts/train-model.py --run-name stage_4_tunning --stage 4 --resume-from-model "stage_4_<ts>/final_model.zip" \
+  --total-timesteps 1024000000 --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
+  --lr-schedule-type constant --lr-start 0.008 \
+  --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.01
+
+# Baseline: 1-Stage PPO (No-CL) trained from scratch on Stage 4 (64M steps)
+python scripts/train-model.py --run-name ppo_no_cl --stage 4 --total-timesteps 64000000 \
+  --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
+  --lr-schedule-type linear --lr-start 0.002 --lr-end 0.0007 \
+  --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.01
+
 python scripts/view_logs.py
 ```
 
