@@ -1,11 +1,11 @@
-# Shaping Building Footprints via Curriculum-Guided Reinforcement Learning
+# Curriculum-Guided Reinforcement Learning with Continuous Local Refinement for Constrained Building Footprint Synthesis
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: >= 3.12](https://img.shields.io/badge/Python->=%203.12-blue.svg)](https://www.python.org/)
 [![Gymnasium: v1.0.0](https://img.shields.io/badge/Gymnasium-v1.0.0-green.svg)](https://gymnasium.farama.org/)
 [![Stable--Baselines3: v2.4.1](https://img.shields.io/badge/Stable--Baselines3-v2.4.1-orange.svg)](https://stable-baselines3.readthedocs.io/)
 
-This repository contains the official codebase and replication package for the research paper: **"Shaping Building Footprints via Curriculum-Guided Reinforcement Learning"** (submitted to *Automation in Construction*; pinned release tag `v2.0-aic-submission`).
+This repository contains the official codebase and replication package for the research paper: **"Curriculum-Guided Reinforcement Learning with Continuous Local Refinement for Constrained Building Footprint Synthesis"**.
 
 The project implements a custom Gymnasium environment (`UrbanPlanner-v0`), trains a Proximal Policy Optimization (PPO) agent using a 4-stage curriculum with PBRS-inspired undiscounted potential-difference reward shaping, pairs the learned policy as an amortized neural warm-start with continuous local refinement (`CL-PPO + Refinement`, implemented via `run_hybrid_ppo.py`), and benchmarks it against classical nonlinear programming (`SLSQP`, `COBYLA`), evolutionary metaheuristics (`CMA-ES`, `Differential Evolution`), Monte Carlo baselines, and RL ablations.
 
