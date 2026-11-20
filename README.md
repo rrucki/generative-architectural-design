@@ -122,8 +122,13 @@ python scripts/train-model.py --run-name stage_3 --stage 3 --resume-from-model "
   --lr-schedule-type constant --lr-start 0.0026 \
   --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.015
 
-# Stage 4 — Orthogonality (1.024B stability horizon; initial Stage 4 warm-start at lr=0.0026, ent=0.015,
-# followed by final Stage 4 tuning run reported in the paper)
+# Stage 4a — Orthogonality initial warm-start from Stage 3 (1.024B budget)
+python scripts/train-model.py --run-name stage_4 --stage 4 --resume-from-model "stage_3_<ts>/final_model.zip" \
+  --total-timesteps 1024000000 --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
+  --lr-schedule-type constant --lr-start 0.0026 \
+  --clip-schedule-type linear --clip-start 0.2 --clip-end 0.11 --ent-coef 0.015
+
+# Stage 4b — Orthogonality fine-tuning run reported in the paper (1.024B stability horizon)
 python scripts/train-model.py --run-name stage_4_tunning --stage 4 --resume-from-model "stage_4_<ts>/final_model.zip" \
   --total-timesteps 1024000000 --n-envs 8 --n-steps 8192 --batch-size 512 --n-epochs 2 \
   --lr-schedule-type constant --lr-start 0.008 \

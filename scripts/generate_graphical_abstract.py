@@ -783,8 +783,8 @@ def main():
     ax.text(
         x4 + w4 / 2,
         0.092,
-        r"$19.0 \pm 1.9$ distinct footprints / site ($94.8\%$ valid)",
-        fontsize=6.4,
+        "9.9–18.8 spatially distinct layouts (19.0 unique tuples)",
+        fontsize=6.2,
         fontweight="bold",
         color=C_INK,
         ha="center",
@@ -793,7 +793,7 @@ def main():
     ax.text(
         x4 + w4 / 2,
         0.056,
-        r"Dissimilarity $1 - \mathrm{IoU} = 0.335$  |  Centroid shift $53.7\,\mathrm{px}$",
+        r"$94.8\%$ valid  |  $1 - \mathrm{IoU} = 0.335$  |  Shift $53.7\,\mathrm{px}$",
         fontsize=5.9,
         style="italic",
         color=C_SUBTLE,
